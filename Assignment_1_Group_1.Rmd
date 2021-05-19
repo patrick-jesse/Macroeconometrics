@@ -118,8 +118,8 @@ y <- gdp.growth[-c(1, 2)]
 # Prior Setup
 
 # Normal prior on phi vector
-mu0 <- c(0, 0.5, 0)
-sig2.0 <- 1000 # Same variance for the three parameters
+mu0 <- c(0, 0, 0)
+sig2.0 <- 10 # Same variance for the three parameters
 
 # IG prior on sigma2
 c0 <- 2
@@ -133,8 +133,8 @@ t <- nrow(X)
 
 # proposal draw variances
 eta2.c <- 0.05
-eta2.phi1 <- 0.5
-eta2.phi2 <- 0.5
+eta2.phi1 <- 0.3
+eta2.phi2 <- 0.3
 eta2 <- c(eta2.c, eta2.phi1, eta2.phi2)
 
 # starting values
@@ -156,7 +156,7 @@ for (i in 1:ntot) {
   ## STEP 1: 
   
   # Create proposal from normal distribution
-  phi.prop <- MASS::mvrnorm(1, mu0, diag(eta2))
+  phi.prop <- MASS::mvrnorm(1, phi.draw, diag(sqrt(eta2)))
   
   
   # Evaluate prior for proposal
@@ -310,7 +310,7 @@ metro.est <- function(y, x, prior, prior.params){
     ## STEP 1: 
     
     # Create proposal
-    phi.prop <- do.call(paste0("r", prior), list(1, prior.params[1], prior.params[2]))
+    phi.prop <- rnorm(1, phi.draw, sqrt(eta2))
     
     
     # Evaluate prior for proposal
