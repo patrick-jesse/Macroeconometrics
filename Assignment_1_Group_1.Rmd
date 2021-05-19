@@ -126,15 +126,15 @@ c0 <- 2
 d0 <- 1
 
 # Algorithm Setup
-nburn <- 10000
-nsave <- 10000
+nburn <- 1e4
+nsave <- 1e4
 ntot <- nburn + nsave
 t <- nrow(X)
 
 # proposal draw variances
-eta2.c <- 0.05
-eta2.phi1 <- 0.3
-eta2.phi2 <- 0.3
+eta2.c <- 0.005
+eta2.phi1 <- 0.4
+eta2.phi2 <- 0.4
 eta2 <- c(eta2.c, eta2.phi1, eta2.phi2)
 
 # starting values
@@ -156,8 +156,8 @@ for (i in 1:ntot) {
   ## STEP 1: 
   
   # Create proposal from normal distribution
-  phi.prop <- MASS::mvrnorm(1, phi.draw, diag(sqrt(eta2)))
-  
+  #phi.prop <- MASS::mvrnorm(1, phi.draw, diag(sqrt(eta2)))
+  phi.prop <- mapply(function(x, y) rnorm(1, x, sd = sqrt(y)), phi.draw, eta2)
   
   # Evaluate prior for proposal
   prior.current <- sum(dnorm(phi.draw, mu0, sqrt(sig2.0), log = TRUE))
@@ -176,7 +176,7 @@ for (i in 1:ntot) {
   
   if(ll.ratio > log(runif(1))){ #if our proposal is likely "enough"
       
-      #replace the current draw for rho with our proposal
+      #replace the current draw for phi with our proposal
       phi.draw <- phi.prop 
       
       #add 1 to our acceptance counter
@@ -184,12 +184,6 @@ for (i in 1:ntot) {
       
   } 
   
-  
-  # Tune proposal variance during first 50% of burn-in
-  if (i < 0.5 * nburn) {
-    if(accept / i > 0.3) eta2 <- eta2 * 1.01
-    if(accept / i < 0.15) eta2 <- eta2 * 0.99
-  }
   
   
   ## STEP 2: SAMPLE SIGMA2 GIVEN PHI & DATA
@@ -220,12 +214,6 @@ for (i in 1:ntot) {
 }
 
 
-```
-
-Let's have a look at the posterior distribution the algorithm ended up with.
-
-```{r}
-
 # Plot traceplots
 apply(cbind(phi.store, sig.store), 2, function(x) plot.ts(x , xlab = "Iteration", ylab= "Parameter Estimate", col = 4))
 
@@ -233,11 +221,10 @@ apply(cbind(phi.store, sig.store), 2, function(x) plot.ts(x , xlab = "Iteration"
 # Plot densities
 apply(cbind(phi.store, sig.store), 2, function(x) plot(density(x), lwd = 2, col = 4))
 
+
 ```
 
-
-
-
+Let's have a look at the posterior distribution the algorithm ended up with.
 
 
 
