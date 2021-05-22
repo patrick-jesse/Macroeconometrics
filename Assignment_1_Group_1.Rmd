@@ -126,13 +126,13 @@ c0 <- 2
 d0 <- 1
 
 # Algorithm Setup
-nburn <- 1e4
-nsave <- 1e4
+nburn <- 2e4
+nsave <- 2e4
 ntot <- nburn + nsave
 t <- nrow(X)
 
 # proposal draw variances
-eta2.c <- 0.005
+eta2.c <- 0.05
 eta2.phi1 <- 0.4
 eta2.phi2 <- 0.4
 eta2 <- c(eta2.c, eta2.phi1, eta2.phi2)
@@ -184,7 +184,11 @@ for (i in 1:ntot) {
       
   } 
   
-  
+  # Tune proposal variance during first 50% of burn-in
+  if (i < 0.5 * nburn) {
+    if(accept / i > 0.3) eta2 <- eta2 * 1.01
+    if(accept / i < 0.15) eta2 <- eta2 * 0.99
+  }
   
   ## STEP 2: SAMPLE SIGMA2 GIVEN PHI & DATA
   
@@ -281,7 +285,7 @@ metro.est <- function(y, x, prior, prior.params){
   eta2  <- 0.0161
   
   sig2.draw <- 1
-  phi.draw  <- 1
+  phi.draw  <- 0.1
   accept    <- 0
   
   
@@ -372,8 +376,11 @@ prior.params <- list(c(0,1), c(1, 1), c(1, 1), c(10, 10), c(0.1, 0.1))
 
 res <- list()
 
+for (i in 1:length(priors)) {
+  res[[i]] <- metro.est(yy, xx, priors[i], prior.params[[i]])
+}
 
-# res <- metro.est(yy, xx, prior = "beta", prior.params = c(0.1, 0.1))
+
 
 ```
 
