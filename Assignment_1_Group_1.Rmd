@@ -381,6 +381,10 @@ for (i in 1:length(priors)) {
 }
 
 
+# Traceplots and densities
+lapply(res, function(x) plot.ts(x[[1]], xlab = "Iteration", ylab= "Parameter Estimate", col = 4))
+lapply(res, function(x) plot(density(x[[1]]), lwd = 2, col = 4))
+
 
 ```
 
