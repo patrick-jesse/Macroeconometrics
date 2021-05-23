@@ -285,7 +285,7 @@ metro.est <- function(y, x, prior, prior.params){
   eta2  <- 0.0161
   
   sig2.draw <- 1
-  phi.draw  <- 0.1
+  phi.draw  <- 0.5
   accept    <- 0
   
   
