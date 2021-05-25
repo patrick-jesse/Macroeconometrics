@@ -332,8 +332,8 @@ metro.est <- function(y, x, prior, prior.params){
     
     
     # Evaluate prior for proposal
-    prior.current <- do.call(paste0("d", prior), list(phi.draw, prior.params[1], prior.params[2]))
-    prior.prop    <- do.call(paste0("d", prior), list(phi.prop, prior.params[1], prior.params[2]))
+    prior.current <- do.call(paste0("d", prior), list(phi.draw, prior.params[1], prior.params[2], log = TRUE))
+    prior.prop    <- do.call(paste0("d", prior), list(phi.prop, prior.params[1], prior.params[2], log = TRUE))
     
     # Evaluate LL
     ll.current <- sum(dnorm(y, x * phi.draw, sqrt(sig2.draw), log = TRUE))
@@ -380,12 +380,10 @@ metro.est <- function(y, x, prior, prior.params){
     # STEP 3: STORE POSTERIOR SAMPLES
       
     #only after burn-in period!
-    if(i > nburn){
-        
+    
     phi.store[i - nburn,]  <- phi.draw
     sig.store[i - nburn,] <- sig2.draw
-        
-    }
+    
       
     
   }
