@@ -237,6 +237,29 @@ Let's have a look at the posterior distribution the algorithm ended up with.
 
 
 
+## 6
+
+```{r}
+
+# Delete unstable
+bool <- apply(abs(phi.store[,2:3]) < 1, 1, all)
+phi.store <- phi.store[bool, ]
+
+# Impulse responses
+shock <- c(1, rep(0, t - 1))
+y.hat <- X %*% colMeans(phi.store) + shock
+
+y.hat.low <- X %*% apply(phi.store, 2, quantile, prob = c(0.025)) + shock
+y.hat.high <- X %*% apply(phi.store, 2, quantile, prob = c(0.975)) + shock
+
+
+# Plot
+ts.plot(y.hat[1:20], lwd = 2, col = 4)
+lines(y.hat.high[1:20], lwd = 2, col = 3)
+lines(y.hat.low[1:20], lwd = 2, col = 5)
+
+```
+
 
 
 
