@@ -305,8 +305,8 @@ metro.est <- function(y, x, prior, prior.params){
   d0 <- 1
   
   # Algorithm Setup
-  nburn <- 10000
-  nsave <- 10000
+  nburn <- 1e4
+  nsave <- 1e4
   ntot <- nburn + nsave
   t <- length(x)
   eta2  <- 0.0161
@@ -319,7 +319,7 @@ metro.est <- function(y, x, prior, prior.params){
   # Storage matrix
   phi.store <- matrix(NA, nsave, 1)
   
-  sig.store <- rep(NA, nsave)
+  sig.store <- matrix(NA, nsave, 1)
   
   
   # Metropolis algorithm loop
@@ -383,7 +383,7 @@ metro.est <- function(y, x, prior, prior.params){
     if(i > nburn){
         
     phi.store[i - nburn,]  <- phi.draw
-    sig.store[i - nburn] <- sig2.draw
+    sig.store[i - nburn,] <- sig2.draw
         
     }
       
@@ -421,7 +421,7 @@ invisible(lapply(res, function(x) plot(density(x[[1]]), lwd = 2, col = 4)))
 ```{r}
 # Plot prior densities
 invisible(Map(function(x, y){
-  t <- seq(-1, 1, 0.01)
+  t <- seq(-3, 3, 0.01)
   plot(t, do.call(paste0("d", x), list(t, y[1], y[2])),
        type = "l", lwd = 2, col = 4)
 }, priors, prior.params))
