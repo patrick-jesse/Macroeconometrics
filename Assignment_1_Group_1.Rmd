@@ -416,6 +416,17 @@ lapply(res, function(x) plot(density(x[[1]]), lwd = 2, col = 4))
 ```
 
 
+## 3
+
+```{r}
+# Plot prior densities
+invisible(Map(function(x, y){
+  t <- seq(-1, 1, 0.01)
+  plot(t, do.call(paste0("d", x), list(t, y[1], y[2])),
+       type = "l", lwd = 2, col = 4)
+}, priors, prior.params))
+
+```
 
 
 
