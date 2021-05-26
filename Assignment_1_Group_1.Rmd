@@ -13,13 +13,11 @@ knitr::opts_chunk$set(echo = TRUE,
                       fig.align = "center")
 ```
 
-# Mic Check
-
 # Time Series Analysis
 
 ## 1
 
-We can use the **quantmod** package to conveniently download the data from the FRED database.
+We can use the **quantmod** package to download the data from the FRED database.
 
 ```{r message=FALSE, warning=FALSE}
 # Download data
