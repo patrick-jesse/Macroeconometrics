@@ -13,7 +13,6 @@ knitr::opts_chunk$set(echo = TRUE,
                       fig.align = "center")
 ```
 
-
 # Time Series Analysis
 
 ## 1
@@ -35,7 +34,6 @@ After filtering for the time period we are interested in, we can now plot the se
 ```{r}
 # Plot
 plot(gdp.ts, lwd = 2, col = 4, ylab = "GDP")
-
 ```
 
 ## 2
@@ -318,6 +316,8 @@ est.med <- apply(phi.clean, 2, function(x){
 phi.comp <- lapply(as.data.frame(t(est.med[, 2:3])), function(x){
   as.matrix(rbind(x, c(1, 0)))
 })
+
+# quick look at our 
 est.med
 
 # number of periods and storage for impulse response
@@ -327,9 +327,9 @@ Imp.store <- matrix(NA, nrow = j + 1, ncol = 3)
 # Now we can pick out the (1, 1) element of phi.comp^j to recover the impulse response
 # at horizon j to a unit shock at time t. We can easily do this within a loop.
 # We can use library(expm) to obtain a matrix power function.
-
 library(expm)
 
+# cols for the plot
 col <-  2:4
 
 invisible(
@@ -355,7 +355,10 @@ Map(function(x, y, z){
 }, phi.comp, est.med[, 1], col))
 
 ```
-
+The unit shock applied to the AR(2) process transmits through our model as expected.
+The return to the initial value takes around twelve periods when using the median of our estimators distributions.
+The lower bound for which we used the 30% quantile is back to pre-shock levels after 5 period and The upper bound 
+is back to pre-shock levels after around 20 periods.  
 
 
 
