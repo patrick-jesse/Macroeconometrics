@@ -26,7 +26,6 @@ gdp.ts <- ts(GDPC1, start = c(1947, 1), frequency = 4)
 
 # Filter
 gdp.ts <- window(gdp.ts, start = c(1970, 1), end = c(2020, 4))
-
 ```
 
 After filtering for the time period we are interested in, we can now plot the series.
@@ -64,7 +63,6 @@ cols <- 2:4
 
 matplot(m, type = "l", col = cols, lty = 1, lwd = 2, ylab = "", xlab = "Time Period")
 legend("bottomleft", fill = cols, legend = c("First Differences", "Linear Detrend", "HP-Filter"), cex = 0.7)
-
 ```
 
 
@@ -307,7 +305,7 @@ phi.clean <- mcm1[[1]][bool, ]
 
 # median  and quantiles of estimates
 est.med <- apply(phi.clean, 2, function(x){
-  c(median(x), quantile(x, probs = c(0.7, 0.3)))
+  c(median(x), quantile(x, probs = c(0.6, 0.4)))
 })
 
 
@@ -346,7 +344,7 @@ Map(function(x, y, z){
   if(x[1,1] == phi.comp[[1]][1, 1]){
     plot(st, type = "l", col = z, main = "Impulse Response", lwd = 2, ylab = "IR",
          xlab = "Period")
-    legend("topright", fill = col, legend = c("50% quantile", "70% quantile", "30% quantile"),
+    legend("topright", fill = col, legend = c("50% quantile", "60% quantile", "40% quantile"),
            cex = 0.7)
   } else {
     lines(st, col = z, lwd = 2)
@@ -507,15 +505,18 @@ for (i in 1:length(priors)) {
 phi.freq <- ar(yy, order.max = 1, method = "yule-walker")$ar
 
 # Traceplots and densities
-invisible(lapply(res, function(x){
-  plot.ts(x[[1]], xlab = "Iteration", ylab = "Parameter Estimate", col = 4)
+invisible(Map(function(x, y){
+  plot.ts(x[[1]], xlab = "Iteration", ylab = "Estimate",
+          main = paste("Estimated Posterior Density", y), col = 4)
   abline(h = phi.freq, lwd = 2, col = 3)
-  }))
-invisible(lapply(res, function(x){
-  plot(density(x[[1]]), lwd = 2, col = 4, main = "Estimated Posterior Density")
-  abline(v = phi.freq, lwd = 2, col = 3)
-  }))
+  }, res, 
+  paste("\n", c("N(0, 1)", "N(1, 1)", "B(1, 1)", "B(10, 10)", "B(0.1, 0.1)"), "Prior")))
 
+invisible(Map(function(x, y){
+  plot(density(x[[1]]), lwd = 2, col = 4, main = paste("Estimated Posterior Density", y))
+  abline(v = phi.freq, lwd = 2, col = 3)
+  }, res, 
+  paste("\n", c("N(0, 1)", "N(1, 1)", "B(1, 1)", "B(10, 10)", "B(0.1, 0.1)"), "Prior")))
 
 ```
 
