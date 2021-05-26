@@ -389,10 +389,11 @@ plot(un.demeaned, col = 4, lwd = 2, ylab = "Demeaned Unemployment Rate")
 
 ```
 
+The demeaned time series is simply shifted downwards, by exactly the mean.
 
 ## 2
 
-We will use the Metropolis algorithm used in the lecture.
+We will use the Metropolis algorithm as seen in the lecture.
 
 ```{r}
 metro.est <- function(y, x, prior, prior.params){
@@ -517,6 +518,8 @@ invisible(Map(function(x, y){
 
 ```
 
+All the traceplots look like nice caterpillars. Thus, the sampler seems to converge well for all prior distributions.
+
 ## 3
 
 ```{r}
@@ -533,6 +536,15 @@ paste("\n", c("N(0, 1)", "N(1, 1)", "B(1, 1)", "B(10, 10)", "B(0.1, 0.1)"))))
 
 ```
 
+A standard normal prior for the autoregressive coefficient is rather informative and implies that the resulting AR(1) process will be stationary since the interval (-1, 1) has a high probability mass in the support of a standard normal distribution.
+
+A normal prior that is centred around 1 with $\sigma^2 = 1$ is also rather informative and will most likely yield an AR(1) that is stationary. 
+
+A beta distribution with the parameters $\alpha = \beta = 1$ corresponds to a uniform distribution on the interval [0, 1]. Thus, such a prior is suitable for the autoregressive coefficient of a stationary AR(1).
+
+The PDF of a beta distribution is approximately normal if the sum of its parameters $\alpha$ and $\beta$ are large enough and $\alpha \approx \beta$, which is the case for the given parameters $\alpha = \beta = 10$. This prior is more informative than the other priors since it has a smaller support. As can be seen from the plot, the bell-shaped density is centred around 0.5 and ranges from 0.2 to 0.8. Thus, the prior will yield a stationary AR(1). 
+
+With a smaller domain, this prior is also more informative than the first three. However, like the other priors, one can expect to obtain a stationary AR(1) given the support of the prior. 
 
 
 ## 4
@@ -556,6 +568,6 @@ The c) prior is equivalent to a uniform distribution for the interval [0, 1], wh
 The Beta prior with parameters $\alpha = 10$ and $\beta = 10$ on the other hand yields a posterior that is centered around a lower value than the priors before. With a starting value of zero for the autoregressive coefficient, the mean of this posterior is rather far from the estimated value (0.967) obtained from the frequentist estimation. This is due to the fact that the prior is very informative given its small support. A strong prior tends to push away the estimated coefficient from its true value by overwriting the information in the likelihood given by the data. Thus, the posterior mean is pushed away from 0.967 towards zero.
 
 Regarding the prior B(.1, .1), the resulting posterior depends on the starting value for the autoregressive coefficient. A starting value of 1 yields a perfectly bell-shaped posterior density and a horizontal line as a trace plot. Whereas a starting value of 0.5 results in a well-behaved posterior with a “jigsaw”-shaped trace plot.
-An explanation for this result can be given by looking at the plot of the prior: 0 and 1 have a very high probability mass, and given a very small variance, one tends to stay around the same area if the starting value is set to either 0 or 1. With a starting value other than zero or one for the autoregressive coefficient, we obtain a similar posterior as in a)-c).
+An explanation for this result can be given by looking at the plot of the prior: 0 and 1 have a very high density, and therefore one tends to stay around the same area if the starting value is set to either 0 or 1. With a starting value other than zero or one for the autoregressive coefficient, we obtain a similar posterior as in a)-c).
 
 
