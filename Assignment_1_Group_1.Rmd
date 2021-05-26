@@ -506,7 +506,7 @@ for (i in 1:length(priors)) {
 # Estimate parameters in frequentist way for comparison
 phi.freq <- ar(yy, order.max = 1, method = "yule-walker")$ar
 
-# Traceplots and densities
+# traceplots
 invisible(Map(function(x, y){
   plot.ts(x[[1]], xlab = "Iteration", ylab = "Estimate",
           main = paste("Estimated Posterior Density", y), col = 4)
@@ -514,22 +514,8 @@ invisible(Map(function(x, y){
   }, res, 
   paste("\n", c("N(0, 1)", "N(1, 1)", "B(1, 1)", "B(10, 10)", "B(0.1, 0.1)"), "Prior")))
 
-invisible(Map(function(x, y){
-  plot(density(x[[1]]), lwd = 2, col = 4, main = paste("Estimated Posterior Density", y))
-  abline(v = phi.freq, lwd = 2, col = 3)
-  }, res, 
-  paste("\n", c("N(0, 1)", "N(1, 1)", "B(1, 1)", "B(10, 10)", "B(0.1, 0.1)"), "Prior")))
 
 ```
-
-The vertical green line is the value obtained for the autoregressive coefficient estimating the model by the Yule-Walker equations.
-The posterior results for the priors N(0, 1), N(1, 1) and B(1, 1) do not differ very much, thus it can be concluded that they are not sensitive to the prior assumptions. This is not very surprising since the priors a) and b) are from the same distribution with slightly different parameters.
-The c) prior is equivalent to a uniform distribution for the interval [0, 1], which is in general a suitable behaviour for an autoregressive coefficient which is stationary.
-The Beta prior with parameters $\alpha = 10$ and $\beta = 10$ on the other hand yields a posterior that is centered around a lower value than the priors before. With a starting value of zero for the autoregressive coefficient, the mean of this posterior is rather far from the estimated value (0.967) obtained from the frequentist estimation. This is due to the fact that the prior is very informative given its small support. A strong prior tends to push away the estimated coefficient from its true value by overwriting the information in the likelihood given by the data. Thus, the posterior mean is pushed away from 0.967 towards zero.
-
-Regarding the prior B(.1, .1), the resulting posterior depends on the starting value for the autoregressive coefficient. A starting value of 1 yields a perfectly bell-shaped posterior density and a horizontal line as a trace plot. Whereas a starting value of 0.5 results in a well-behaved posterior with a “jigsaw”-shaped trace plot.
-An explanation for this result can be given by looking at the plot of the prior: 0 and 1 have a very high probability mass, and given a very small variance, one tends to stay around the same area if the starting value is set to either 0 or 1. With a starting value other than zero or one for the autoregressive coefficient, we obtain a similar posterior as in a)-c).
-
 
 ## 3
 
@@ -542,3 +528,30 @@ invisible(Map(function(x, y){
 }, priors, prior.params))
 
 ```
+
+
+
+## 4
+
+```{r}
+
+# posterior densities
+invisible(Map(function(x, y){
+  plot(density(x[[1]]), lwd = 2, col = 4, main = paste("Estimated Posterior Density", y))
+  abline(v = phi.freq, lwd = 2, col = 3)
+  }, res, 
+  paste("\n", c("N(0, 1)", "N(1, 1)", "B(1, 1)", "B(10, 10)", "B(0.1, 0.1)"), "Prior")))
+
+
+```
+
+
+The vertical green line is the value obtained for the autoregressive coefficient estimating the model by the Yule-Walker equations.
+The posterior results for the priors N(0, 1), N(1, 1) and B(1, 1) do not differ very much, thus it can be concluded that they are not sensitive to the prior assumptions. This is not very surprising since the priors a) and b) are from the same distribution with slightly different parameters.
+The c) prior is equivalent to a uniform distribution for the interval [0, 1], which is in general a suitable behaviour for an autoregressive coefficient which is stationary.
+The Beta prior with parameters $\alpha = 10$ and $\beta = 10$ on the other hand yields a posterior that is centered around a lower value than the priors before. With a starting value of zero for the autoregressive coefficient, the mean of this posterior is rather far from the estimated value (0.967) obtained from the frequentist estimation. This is due to the fact that the prior is very informative given its small support. A strong prior tends to push away the estimated coefficient from its true value by overwriting the information in the likelihood given by the data. Thus, the posterior mean is pushed away from 0.967 towards zero.
+
+Regarding the prior B(.1, .1), the resulting posterior depends on the starting value for the autoregressive coefficient. A starting value of 1 yields a perfectly bell-shaped posterior density and a horizontal line as a trace plot. Whereas a starting value of 0.5 results in a well-behaved posterior with a “jigsaw”-shaped trace plot.
+An explanation for this result can be given by looking at the plot of the prior: 0 and 1 have a very high probability mass, and given a very small variance, one tends to stay around the same area if the starting value is set to either 0 or 1. With a starting value other than zero or one for the autoregressive coefficient, we obtain a similar posterior as in a)-c).
+
+
