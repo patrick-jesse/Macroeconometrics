@@ -357,7 +357,7 @@ Map(function(x, y, z){
 
 The unit shock applied to the AR(2) process transmits through our model as expected.
 The return to the initial value takes around twelve periods when using the median of our estimators distributions.
-The lower bound for which we used the 30% quantile is back to pre-shock levels after 5 period and The upper bound 
+The lower bound for which we used the 40% quantile is back to pre-shock levels after 5 period and The upper bound 
 is back to pre-shock levels after around 20 periods.  
 
 
