@@ -517,6 +517,8 @@ invisible(Map(function(x, y){
 
 ```
 
+All the traceplots look like nice caterpillars. Thus, the sample seems to converge well for all prior distributions.
+
 ## 3
 
 ```{r}
