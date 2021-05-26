@@ -1,12 +1,13 @@
 ---
 title: "Assignment 1"
-author: "Fabiano Blasch, Nik Gabrovsek, Patrick Gyasi, Gregor Steiner"
-date: "May, 2021"
+author: "Fabian Blasch, Nik Gabrovsek, Patrick Gyasi, Gregor Steiner"
+date: "`r format(Sys.Date(), format = '%d.%m.%Y')`"
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,
+                      #message = FALSE,
                       fig.width = 5,
                       fig.height = 3,
                       fig.align = "center")
@@ -37,10 +38,6 @@ plot(gdp.ts, lwd = 2, col = 4, ylab = "GDP")
 
 ```
 
-## 2
-
-Trend is a slow change that occurs over a long period of time. In our case trend is clearly positive. Cyclical component is movement around our trend line, its of short time nature.The cycle component is closely related to business cycles. Time series with trend in it are normally not stationary. Stationary time series have no predictable patterns in long term which is clearly not the case for GDP.
-Main idea of detrending is to get rid of a trend in a time series. Detrending changes our un-stationary time series into a stationary one. We know different ways of detrending. First one I will mention is usage of growth rates, we basically take a difference of logarithm between two data points. This gives us a growth rate time series which is stationary. Next one I will mention is linear/nonlinear detrending, if we assume our trend is linear, we can estimate linear regression of our time-series this will give us a trend and we can estimate our detrended time-series with observation of deviations from linear regression line. Lastly we can use filters to detrend data, there are various different filter such as HP and Bandpass filter. They are similar to linear detrending, but we can have smoother line of best-fit as trend line is not necessarily linear.
 
 
 ## 3
@@ -110,156 +107,191 @@ $$
 Now, we can start setting up the Metropolis algorithm to estimate the posterior density.
 
 ```{r}
-########## Metropolis Algorithm ##########
+# Set up dependant variable
+# time period
+t <- length(gdp.growth)
 
 
-# Set up X matrix and y vector
-T <- length(gdp.growth)
-X <- cbind(rep(1, T-2), gdp.growth[-c(1, T)], gdp.growth[-c(T-1, T)])
-y <- gdp.growth[-c(1, 2)]
+# lags 
+interc <- rep(1, t - 2)
 
+# we remove the first two obs since the L(2) var start in t = 2
+y1 <- gdp.growth[-(1:2)]
 
-# Prior Setup
+# lagged vars
+y_l1 <- gdp.growth[-c(1, t)]
+y_l2 <- gdp.growth[-c(t - 1, t)]
 
-# Normal prior on phi vector
-mu0 <- c(0, 0, 0)
-sig2.0 <- 100 # Same variance for the three parameters
+# bind to a matrix for regression
+X <- cbind(interc, y_l1, y_l2)
 
-# IG prior on sigma2
-c0 <- 2
-d0 <- 1
+# Metropolis - Hastings algorithm #
 
-# Algorithm Setup
-nburn <- 2e4
-nsave <- 2e4
-ntot <- nburn + nsave
-t <- nrow(X)
+# Normal Prior on c
+mu0 <- 0
+sig0c <- 0.005
 
-# proposal draw variances
-eta2.c <- 0.05
-eta2.phi1 <- 0.4
-eta2.phi2 <- 0.4
-eta2 <- c(eta2.c, eta2.phi1, eta2.phi2)
+# IG prior on on the variance
+s0 <- 2
+r0 <- 1
 
-# starting values
+# normal prior on phi
+pmu0 <- 0 
+psig0 <- 0.4
+
+# storage and starting values
 sig2.draw <- 1
-phi.draw  <- c(0, 0, 0)
-accept    <- 0
+phi.draw <- c(0, 0, 0)
+accept <- 0
+sig0 <- sqrt(100)
 
-
-# Storage matrix
-phi.store <- matrix(NA, nsave, 3)
-colnames(phi.store) <- c("c", "phi1", "phi2")
-
-sig.store <- matrix(NA, nsave, 1)
-
-
-# Metropolis algorithm loop
-for (i in 1:ntot) {
+# Function wrapper
+MCM <- function(nsave = 45000, nburn = 10000, covmat = X, y = y1){
+  # storage
+  phi.store  <- matrix(NA, nsave, 3)
+  sig2.store <- matrix(NA, nsave, 1)
+  ntot  <- nsave + nburn
   
-  ## STEP 1: 
+  # loop
+  for(i in 1:ntot){
+    # create a proposal for phi
+    phi.prop <- mapply(function(x, y) rnorm(1, x, y), phi.draw, c(sig0c, psig0, psig0))
+    
+    # evaluate the uniform prior for current draw and proposal
+    prior.current <- sum(dnorm(phi.draw[1], mu0, sig0, log = T), 
+                          dnorm(phi.draw[2:3], pmu0, psig0, log = T))
+    
+    prior.prop    <- sum(dnorm(phi.prop[1], mu0, sig0, log = T),
+                          dnorm(phi.prop[2:3], pmu0, psig0, log = T))
   
-  # Create proposal from normal distribution
-  #phi.prop <- MASS::mvrnorm(1, phi.draw, diag(sqrt(eta2)))
-  phi.prop <- mapply(function(x, y) rnorm(1, x, sd = sqrt(y)), phi.draw, eta2)
-  
-  # Evaluate prior for proposal
-  prior.current <- sum(dnorm(phi.draw, mu0, sqrt(sig2.0), log = TRUE))
-  prior.prop    <- sum(dnorm(phi.prop, mu0, sqrt(sig2.0), log = TRUE))
-  
-  # Evaluate LL
-  ll.current <- sum(dnorm(y, X %*% phi.draw, sqrt(sig2.draw), log = TRUE))
-  ll.prop <- sum(dnorm(y, X %*% phi.prop, sqrt(sig2.draw), log = TRUE))
-  
-  # And add prior
-  c.p.current <- ll.current + prior.current
-  c.p.prop <- ll.prop + prior.prop
-  
-  # And LR
-  ll.ratio <- c.p.prop - c.p.current
-  
-  if(ll.ratio > log(runif(1))){ #if our proposal is likely "enough"
+    # evaluate the normal likelihood for current draw and proposal
+    ll.current    <- sum(dnorm(y, X %*% phi.draw, sqrt(sig2.draw), log = T))
+    ll.prop       <- sum(dnorm(y, X %*% phi.prop, sqrt(sig2.draw), log = T))
+    
+    # log likelihood ratio and difference
+    c.p.current   <- ll.current + prior.current
+    c.p.prop      <- ll.prop    + prior.prop
+    
+    # finally, we can compute the likelihood ratio
+    ll.ratio      <- c.p.prop - c.p.current
+    
+    # Discard if ll smaller than draw
+    if(ll.ratio > log(runif(1))){ # if our proposal is likely "enough"
       
       #replace the current draw for phi with our proposal
       phi.draw <- phi.prop 
       
       #add 1 to our acceptance counter
       accept   <- accept + 1
-      
-  } 
+    }      
+    
+     # STEP 2: SAMPLE SIGMA2 GIVEN phi & DATA
   
-  # Tune proposal variance during first 50% of burn-in
-  if (i < 0.5 * nburn) {
-    if(accept / i > 0.3) eta2 <- eta2 * 1.01
-    if(accept / i < 0.15) eta2 <- eta2 * 0.99
-  }
+    # compute errors
+    e  <- y - X %*% phi.draw
+    # sum of squared residuals (equivalent to sum((e)^2))
+    ee <- t(e) %*% e
   
-  ## STEP 2: SAMPLE SIGMA2 GIVEN PHI & DATA
+    # compute posterior quantities
+    s <- s0 +  t/2
+    r <- r0 + ee/2
   
-  # compute errors
-  e  <- y - X %*% phi.draw
-  
-  # sum of squared residuals (equivalent to sum((e)^2))
-  ee <- t(e) %*% e
-  
-  # compute posterior quantities
-  ck <- c0 +  t/2
-  dk <- d0 + ee/2
-  # sample sigma2 from inverse gamma posterior
-  sig2.draw <- 1 / rgamma(1, ck, dk)
+    # sample sigma2 from inverse gamma posterior
+    sig2.draw <- 1 / rgamma(1, s, r)
     
   # STEP 3: STORE POSTERIOR SAMPLES
     
-  #only after burn-in period!
-  if(i > nburn){
-      
-  phi.store[i - nburn,]  <- phi.draw
-  sig.store[i - nburn,] <- sig2.draw
-      
-  }
+    #only after burn-in period!
     
+    if(i > nburn){
+      
+    phi.store[i - nburn,]  <- phi.draw
+    sig2.store[i - nburn,] <- sig2.draw
+      
+    }
+  }
   
-}
+  return(list(phi.store,
+              accept / i))
+} 
 
+# run 
+mcm1 <- MCM()
 
-# Plot traceplots
-apply(cbind(phi.store, sig.store), 2, function(x) plot.ts(x , xlab = "Iteration", ylab= "Parameter Estimate", col = 4))
+# trace 
+apply(mcm1[[1]], 2, plot, type = "l", col = 4, lwd = 0.01)
 
+# accept
+mcm1[[2]]
 
-# Plot densities
-apply(cbind(phi.store, sig.store), 2, function(x) plot(density(x), lwd = 2, col = 4))
-
-
+# dis
+apply(mcm1[[1]], 2, function(x){
+  plot(density(x))
+})
 ```
+## 7
 
-Let's have a look at the posterior distribution the algorithm ended up with.
-
-
-
-
-## 6
+To simulate the IRF for our AR(2) function, we can make use of the fact that any AR(p) 
+process can be written as a vector AR(1) process. Once brought into the so called companion
+form we can easily obtain the IRF from the j'th power of the (1,1) element of the companion matrix.
 
 ```{r}
-
-# Delete unstable
-bool <- apply(abs(phi.store[,2:3]) < 1, 1, all)
-phi.store <- phi.store[bool, ]
-
-# Impulse responses
-shock <- c(1, rep(0, t - 1))
-y.hat <- X %*% colMeans(phi.store) + shock
-
-y.hat.low <- X %*% apply(phi.store, 2, quantile, prob = c(0.025)) + shock
-y.hat.high <- X %*% apply(phi.store, 2, quantile, prob = c(0.975)) + shock
+# first exclude all non stable draws, i.e, |phi| > 1
+bool <- apply(mcm1[[1]], 1, function(x) all(abs(x) < 1))
 
 
-# Plot
-ts.plot(y.hat[1:20], lwd = 2, col = 4)
-lines(y.hat.high[1:20], lwd = 2, col = 3)
-lines(y.hat.low[1:20], lwd = 2, col = 5)
+
+# subset
+phi.clean <- mcm1[[1]][bool, ]
+
+# median  and quantiles of estimates
+est.med <- apply(phi.clean, 2, function(x){
+  c(median(x), quantile(x, probs = c(0.7, 0.3)))
+})
+
+
+
+# Companion Matrix
+phi.comp <- lapply(as.data.frame(t(est.med[, 2:3])), function(x){
+  as.matrix(rbind(x, c(1, 0)))
+})
+est.med
+
+# number of periods and storage for impulse response
+j <- 20 
+Imp.store <- matrix(NA, nrow = j + 1, ncol = 3)
+
+# Now we can pick out the (1, 1) element of phi.comp^j to recover the impulse response
+# at horizon j to a unit shock at time t. We can easily do this within a loop.
+# We can use library(expm) to obtain a matrix power function.
+
+library(expm)
+
+col <-  2:4
+
+invisible(
+Map(function(x, y, z){
+  # storage
+  st <- rep(NA, j + 1)
+  
+  # loop
+  for(l in 0:20){
+     st[l + 1] <- (x %^% l)[1, 1] + y 
+  }
+  
+  # plot
+  if(x[1,1] == phi.comp[[1]][1, 1]){
+    plot(st, type = "l", col = z, main = "Impulse Response", lwd = 2, ylab = "IR",
+         xlab = "Period")
+    legend("topright", fill = col, legend = c("50% quantile", "70% quantile", "30% quantile"),
+           cex = 0.8)
+  } else {
+    lines(st, col = z, lwd = 2)
+  }
+  
+}, phi.comp, est.med[, 1], col))
 
 ```
-
 
 
 
