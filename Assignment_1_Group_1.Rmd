@@ -361,7 +361,7 @@ Map(function(x, y, z){
 
 The unit shock applied to the AR(2) process transmits through our model as expected.
 The return to the initial value takes around twelve periods when using the median of our estimators distributions.
-The lower bound for which we used the 40% quantile is back to pre-shock levels after 5 period and The upper bound 
+The lower bound, for which we used the 40% quantile, is back to pre-shock levels after 9 periods and the upper bound 
 is back to pre-shock levels after around 20 periods.  
 
 
@@ -514,7 +514,7 @@ phi.freq <- ar(yy, order.max = 1, method = "yule-walker")$ar
 # traceplots
 invisible(Map(function(x, y){
   plot.ts(x[[1]], xlab = "Iteration", ylab = "Estimate",
-          main = paste("Estimated Posterior Density", y), col = 4)
+          main = paste("Traceplot", y), col = 4)
   abline(h = phi.freq, lwd = 2, col = 3)
   }, res, 
   paste("\n", c("N(0, 1)", "N(1, 1)", "B(1, 1)", "B(10, 10)", "B(0.1, 0.1)"), "Prior")))
