@@ -91,7 +91,7 @@ tseries::adf.test(gdp.growth)
 
 ```
 
-We do reject the null-hypothesis of non-stationarity. Thus, the series seems to be stationary.
+We use the well-known Augmented Dickey-Fuller Test to test for stationarity. The null-hypothesis of non-stationarity is rejected. Thus, the series seems to be stationary.
 
 
 ## 5
