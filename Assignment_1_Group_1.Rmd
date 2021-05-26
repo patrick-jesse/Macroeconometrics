@@ -271,7 +271,8 @@ Map(function(x, y, z){
   },
   list(mcm1[[1]][, 1], mcm1[[1]][, 2], mcm1[[1]][, 3]), phi.mle, c("Intercept", "Phi 1", "Phi 2")))
 
-
+# and look at accept ratio
+mcm1[[2]]
 
 # density
 invisible(
@@ -284,7 +285,7 @@ Map(function(x, y, z){
 
 ```
 
-
+The traceplots we obtain, nicely resemble caterpillars. This is a sign that the sampler converges very well. This is also confirmed by the accept ratio. Also, the posterior densities look very well behaved, i.e. they are unimodal and pretty symmetric. The estimates for $\varphi_1, \varphi_2$ are exactly centered at the Maximum Likelihood estimate (MLE). Thus, a frequentist approach would yield similar results. For the intercept, however, the MLE is only on the right tail of our posterior distribution.
 
 
 
@@ -353,6 +354,7 @@ Map(function(x, y, z){
 }, phi.comp, est.med[, 1], col))
 
 ```
+
 The unit shock applied to the AR(2) process transmits through our model as expected.
 The return to the initial value takes around twelve periods when using the median of our estimators distributions.
 The lower bound for which we used the 30% quantile is back to pre-shock levels after 5 period and The upper bound 
