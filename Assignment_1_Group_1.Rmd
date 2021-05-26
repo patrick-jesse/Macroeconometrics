@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE,
                       fig.align = "center")
 ```
 
+
 # Time Series Analysis
 
 ## 1
@@ -107,7 +108,7 @@ in a Bayesian fashion. In matrix notation this reads as
 $$
 y = X \varphi + \varepsilon,
 $$
-where $y := [y_3, ..., y_T]', \varphi := [c, \varphi_1, \varphi_2]', \varepsilon := [\varepsilon_3,..., \varepsilon_T]'$ and 
+where $y := [y_3, ..., y_T]', \varphi := [c, \varphi_1, \varphi_2]', \varepsilon := [\varepsilon_3,..., \varepsilon_T]'$ and
 $$
 X := \begin{bmatrix}
 1 & y_2 & y_1\\
@@ -144,7 +145,7 @@ Now, we can start setting up the Metropolis algorithm to estimate the posterior 
 t <- length(gdp.growth)
 
 
-# lags 
+# lags
 interc <- rep(1, t - 2)
 
 # we remove the first two obs since the L(2) var start in t = 2
@@ -168,7 +169,7 @@ s0 <- 2
 r0 <- 1
 
 # normal prior on phi
-pmu0 <- 0 
+pmu0 <- 0
 sig0 <- sqrt(100)
 
 # Proposal variances
@@ -187,82 +188,82 @@ MCM <- function(nsave = 45000, nburn = 10000, covmat = X, y = y1){
   phi.store  <- matrix(NA, nsave, 3)
   sig2.store <- matrix(NA, nsave, 1)
   ntot  <- nsave + nburn
-  
+
   # loop
   for(i in 1:ntot){
     # create a proposal for phi
     phi.prop <- mapply(function(x, y) rnorm(1, x, y), phi.draw, eta2)
-    
+
     # evaluate the uniform prior for current draw and proposal
-    prior.current <- sum(dnorm(phi.draw[1], mu0, sig0, log = T), 
+    prior.current <- sum(dnorm(phi.draw[1], mu0, sig0, log = T),
                           dnorm(phi.draw[2:3], pmu0, sig0, log = T))
-    
+
     prior.prop    <- sum(dnorm(phi.prop[1], mu0, sig0, log = T),
                           dnorm(phi.prop[2:3], pmu0, sig0, log = T))
-  
+
     # evaluate the normal likelihood for current draw and proposal
     ll.current    <- sum(dnorm(y, X %*% phi.draw, sqrt(sig2.draw), log = T))
     ll.prop       <- sum(dnorm(y, X %*% phi.prop, sqrt(sig2.draw), log = T))
-    
+
     # log likelihood ratio and difference
     c.p.current   <- ll.current + prior.current
     c.p.prop      <- ll.prop    + prior.prop
-    
+
     # finally, we can compute the likelihood ratio
     ll.ratio      <- c.p.prop - c.p.current
-    
+
     # Discard if ll smaller than draw
     if(ll.ratio > log(runif(1))){ # if our proposal is likely "enough"
-      
+
       #replace the current draw for phi with our proposal
-      phi.draw <- phi.prop 
-      
+      phi.draw <- phi.prop
+
       #add 1 to our acceptance counter
       accept   <- accept + 1
     }      
-    
-    
+
+
     # Tune proposal variance during first 50% of burn-in
     if (i < 0.5 * nburn) {
       if(accept / i > 0.3) eta2 <- eta2 * 1.01
       if(accept / i < 0.15) eta2 <- eta2 * 0.99
     }
-    
-    
+
+
      # STEP 2: SAMPLE SIGMA2 GIVEN phi & DATA
-  
+
     # compute errors
     e  <- y - X %*% phi.draw
     # sum of squared residuals (equivalent to sum((e)^2))
     ee <- t(e) %*% e
-  
+
     # compute posterior quantities
     s <- s0 +  t/2
     r <- r0 + ee/2
-  
+
     # sample sigma2 from inverse gamma posterior
     sig2.draw <- 1 / rgamma(1, s, r)
-    
+
   # STEP 3: STORE POSTERIOR SAMPLES
-    
+
     #only after burn-in period!
-    
+
     if(i > nburn){
-      
+
     phi.store[i - nburn,]  <- phi.draw
     sig2.store[i - nburn,] <- sig2.draw
-      
+
     }
   }
-  
+
   return(list(phi.store,
               accept / i))
-} 
+}
 
-# run 
+# run
 mcm1 <- MCM()
 
-# trace 
+# trace
 invisible(apply(mcm1[[1]], 2, plot, type = "l", col = 4, ylab = "Parameter Estimate"))
 
 # dis
@@ -273,7 +274,7 @@ invisible(apply(mcm1[[1]], 2, function(x){
 ```
 ## 7
 
-To simulate the IRF for our AR(2) function, we can make use of the fact that any AR(p) 
+To simulate the IRF for our AR(2) function, we can make use of the fact that any AR(p)
 process can be written as a vector AR(1) process. Once brought into the so called companion
 form we can easily obtain the IRF from the j'th power of the (1,1) element of the companion matrix.
 
@@ -300,7 +301,7 @@ phi.comp <- lapply(as.data.frame(t(est.med[, 2:3])), function(x){
 est.med
 
 # number of periods and storage for impulse response
-j <- 20 
+j <- 20
 Imp.store <- matrix(NA, nrow = j + 1, ncol = 3)
 
 # Now we can pick out the (1, 1) element of phi.comp^j to recover the impulse response
@@ -315,12 +316,12 @@ invisible(
 Map(function(x, y, z){
   # storage
   st <- rep(NA, j + 1)
-  
+
   # loop
   for(l in 0:20){
-     st[l + 1] <- (x %^% l)[1, 1] + y 
+     st[l + 1] <- (x %^% l)[1, 1] + y
   }
-  
+
   # plot
   if(x[1,1] == phi.comp[[1]][1, 1]){
     plot(st, type = "l", col = z, main = "Impulse Response", lwd = 2, ylab = "IR",
@@ -330,7 +331,7 @@ Map(function(x, y, z){
   } else {
     lines(st, col = z, lwd = 2)
   }
-  
+
 }, phi.comp, est.med[, 1], col))
 
 ```
@@ -372,98 +373,98 @@ We will use the Metropolis algorithm used in the lecture.
 
 ```{r}
 metro.est <- function(y, x, prior, prior.params){
-  
-  
+
+
   # IG prior on sigma2
   c0 <- 2
   d0 <- 1
-  
+
   # Algorithm Setup
   nburn <- 1e4
   nsave <- 1e4
   ntot <- nburn + nsave
   t <- length(x)
   eta2  <- 0.0161
-  
+
   sig2.draw <- 1
   phi.draw  <- 0.5
   accept    <- 0
-  
-  
+
+
   # Storage matrix
   phi.store <- matrix(NA, nsave, 1)
-  
+
   sig.store <- matrix(NA, nsave, 1)
-  
-  
+
+
   # Metropolis algorithm loop
   for (i in 1:ntot) {
-    
-    ## STEP 1: 
-    
+
+    ## STEP 1:
+
     # Create proposal
     phi.prop <- rnorm(1, phi.draw, sqrt(eta2))
-    
-    
+
+
     # Evaluate prior for proposal
     prior.current <- do.call(paste0("d", prior), list(phi.draw, prior.params[1], prior.params[2], log = TRUE))
     prior.prop    <- do.call(paste0("d", prior), list(phi.prop, prior.params[1], prior.params[2], log = TRUE))
-    
+
     # Evaluate LL
     ll.current <- sum(dnorm(y, x * phi.draw, sqrt(sig2.draw), log = TRUE))
     ll.prop <- sum(dnorm(y, x * phi.prop, sqrt(sig2.draw), log = TRUE))
-    
+
     # And add prior
     c.p.current <- ll.current + prior.current
     c.p.prop <- ll.prop + prior.prop
-    
+
     # And LR
     ll.ratio <- c.p.prop - c.p.current
-    
+
     if(ll.ratio > log(runif(1))){ #if our proposal is likely "enough"
-        
+
         #replace the current draw for rho with our proposal
-        phi.draw <- phi.prop 
-        
+        phi.draw <- phi.prop
+
         #add 1 to our acceptance counter
         accept   <- accept + 1
-        
-      } 
-    
+
+      }
+
     # Tune proposal variance during first 50% of burn-in
     if (i < 0.5 * nburn) {
       if(accept / i > 0.3) eta2 <- eta2 * 1.01
       if(accept / i < 0.15) eta2 <- eta2 * 0.99
     }
-    
-    
+
+
     ## STEP 2: SAMPLE SIGMA2 GIVEN PHI & DATA
-    
+
     # compute errors
     e  <- y - x * phi.draw
-    
+
     # sum of squared residuals (equivalent to sum((e)^2))
     ee <- t(e) %*% e
-    
+
     # compute posterior quantities
     ck <- c0 +  t/2
     dk <- d0 + ee/2
     # sample sigma2 from inverse gamma posterior
     sig2.draw <- 1 / rgamma(1, ck, dk)
-      
+
     # STEP 3: STORE POSTERIOR SAMPLES
-      
+
     #only after burn-in period!
-    
+
     phi.store[i - nburn,]  <- phi.draw
     sig.store[i - nburn,] <- sig2.draw
-    
-      
-    
+
+
+
   }
 
   return(list(Phi = phi.store, Sig2 = sig.store))
-  
+
 }
 
 # Estimate posteriors
@@ -495,13 +496,13 @@ invisible(lapply(res, function(x){
 
 ```
 
-The vertical green line is the value obtained for the autoregressive coefficient estimating the model by the Yule-Walker equations. 
-The posterior results for the priors N(0, 1), N(1, 1) and B(1, 1) do not differ very much, thus it can be concluded that they are not sensitive to the prior assumptions. This is not very surprising since the priors a) and b) are from the same distribution with slightly different parameters. 
-The c) prior is equivalent to a uniform distribution for the interval [0, 1], which is in general a suitable behaviour for an autoregressive coefficient which is stationary. 
+The vertical green line is the value obtained for the autoregressive coefficient estimating the model by the Yule-Walker equations.
+The posterior results for the priors N(0, 1), N(1, 1) and B(1, 1) do not differ very much, thus it can be concluded that they are not sensitive to the prior assumptions. This is not very surprising since the priors a) and b) are from the same distribution with slightly different parameters.
+The c) prior is equivalent to a uniform distribution for the interval [0, 1], which is in general a suitable behaviour for an autoregressive coefficient which is stationary.
 The Beta prior with parameters $\alpha = 10$ and $\beta = 10$ on the other hand yields a posterior that is centered around a lower value than the priors before. With a starting value of zero for the autoregressive coefficient, the mean of this posterior is rather far from the estimated value (0.967) obtained from the frequentist estimation. This is due to the fact that the prior is very informative given its small support. A strong prior tends to push away the estimated coefficient from its true value by overwriting the information in the likelihood given by the data. Thus, the posterior mean is pushed away from 0.967 towards zero.
 
 Regarding the prior B(.1, .1), the resulting posterior depends on the starting value for the autoregressive coefficient. A starting value of 1 yields a perfectly bell-shaped posterior density and a horizontal line as a trace plot. Whereas a starting value of 0.5 results in a well-behaved posterior with a “jigsaw”-shaped trace plot.
-An explanation for this result can be given by looking at the plot of the prior: 0 and 1 have a very high probability mass, and given a very small variance, one tends to stay around the same area if the starting value is set to either 0 or 1. With a starting value other than zero or one for the autoregressive coefficient, we obtain a similar posterior as in a)-c). 
+An explanation for this result can be given by looking at the plot of the prior: 0 and 1 have a very high probability mass, and given a very small variance, one tends to stay around the same area if the starting value is set to either 0 or 1. With a starting value other than zero or one for the autoregressive coefficient, we obtain a similar posterior as in a)-c).
 
 
 ## 3
@@ -515,17 +516,3 @@ invisible(Map(function(x, y){
 }, priors, prior.params))
 
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
