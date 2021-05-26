@@ -175,7 +175,7 @@ sig0 <- sqrt(100)
 # Proposal variances
 eta2.c <- 0.005
 eta2.phi <- 0.4
-
+eta2 <- c(eta2.c, eta2.phi, eta2.phi)
 # storage and starting values
 sig2.draw <- 1
 phi.draw <- c(0, 0, 0)
@@ -192,7 +192,7 @@ MCM <- function(nsave = 45000, nburn = 10000, covmat = X, y = y1){
   # loop
   for(i in 1:ntot){
     # create a proposal for phi
-    phi.prop <- mapply(function(x, y) rnorm(1, x, y), phi.draw, c(eta2.c, eta2.phi, eta2.phi))
+    phi.prop <- mapply(function(x, y) rnorm(1, x, y), phi.draw, eta2)
     
     # evaluate the uniform prior for current draw and proposal
     prior.current <- sum(dnorm(phi.draw[1], mu0, sig0, log = T), 
@@ -221,6 +221,14 @@ MCM <- function(nsave = 45000, nburn = 10000, covmat = X, y = y1){
       #add 1 to our acceptance counter
       accept   <- accept + 1
     }      
+    
+    
+    # Tune proposal variance during first 50% of burn-in
+    if (i < 0.5 * nburn) {
+      if(accept / i > 0.3) eta2 <- eta2 * 1.01
+      if(accept / i < 0.15) eta2 <- eta2 * 0.99
+    }
+    
     
      # STEP 2: SAMPLE SIGMA2 GIVEN phi & DATA
   
@@ -256,15 +264,13 @@ MCM <- function(nsave = 45000, nburn = 10000, covmat = X, y = y1){
 mcm1 <- MCM()
 
 # trace 
-apply(mcm1[[1]], 2, plot, type = "l", col = 4, lwd = 0.01)
-
-# accept
-mcm1[[2]]
+invisible(apply(mcm1[[1]], 2, plot, type = "l", col = 4, ylab = "Parameter Estimate"))
 
 # dis
-apply(mcm1[[1]], 2, function(x){
-  plot(density(x))
-})
+invisible(apply(mcm1[[1]], 2, function(x){
+  plot(density(x), col = 4, lwd = 2, main = "Estimated Posterior Density")
+}))
+
 ```
 ## 7
 
