@@ -66,7 +66,7 @@ cols <- 2:4
 matplot(m, type = "l", col = cols, lty = 1, lwd = 2, ylab = "", xlab = "Time Period",
         main = "Detrended Time Series")
 legend("bottomleft", fill = cols, 
-       legend = c("First Differences", "Linear Detrend", "HP-Filter"), cex = 0.6)
+       legend = c("First Differences", "Linear Detrend", "HP-Filter"), cex = 0.5)
 ```
 
 
