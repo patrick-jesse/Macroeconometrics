@@ -35,9 +35,10 @@ After filtering for the time period we are interested in, we can now plot the se
 plot(gdp.ts, lwd = 2, col = 4, ylab = "GDP", main = "GDP")
 ```
 
+A trend is a slow change that occurs over a long period of time. In our case the trend is clearly positive. The Cyclical component is movement around our trend line, it's of short term nature. Time series with trend in it are not stationary. Stationary time series have no predictable patterns in the long term which is clearly not the case for GDP.
+
 ## 2
 
-A trend is a slow change that occurs over a long period of time. In our case the trend is clearly positive.The Cyclical component is movement around our trend line, it's of short term nature. Time series with trend in it are not stationary. Stationary time series have no predictable patterns in the long term which is clearly not the case for GDP.
 The Main idea of detrending is to get rid of a trend in a time series. Detrending changes our un-stationary time series into a stationary one. We know different ways of detrending: first-differences, computing growth rates, linear detrending and filters. The first two are self-explanatory, linear detrending works as follows: if we assume our trend is linear, we can estimate linear regression of our time-series, this gives us a trend and we can then estimate our detrended time-series via the deviations from the linear regression line. Lastly, we can use filters to detrend data, there are various different filter such as the HP and the Bandpass filter. They are similar to linear detrending, but we achieve a smoother fit as the trend line is not necessarily linear.
 
 We can plot the three differently detrended lines for GDP and compare them. We use first-differences instead of growth rates here, since the latter will be used later on anyways.
