@@ -1,0 +1,41 @@
+---
+title: |
+    | Assignment II
+    | Group I
+      
+author: "Fabian Blasch, Nik Gabrovsek, Patrick Gyasi, Gregor Steiner"
+date: "`r format(Sys.Date(), format = '%d.%m.%Y')`"
+output: pdf_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      # cache = TRUE ,
+                      fig.width = 4,
+                      fig.height = 3, 
+                      fig.align = "center")
+```
+
+## Packages
+
+```{r, results = "hide"}
+# Packages
+get.package <- function(package){
+  
+  lapply(package, \(x){
+    # check if packages are installed and if not install them
+    if(!require(x, character.only = T)){
+       install.packages(x)
+    }
+    # call package
+    library(x, character.only = T)
+  })
+    
+}
+
+get.package(c("tis", "MASS"))
+
+# since we will use Map() alot for plotting we will wrap it in invisible()
+invis.Map <- function(f, ...) invisible(Map(f, ...)) 
+```
