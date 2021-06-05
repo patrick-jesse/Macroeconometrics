@@ -1,0 +1,20 @@
+---
+title: "Assignment 2"
+author: "Fabian Blasch, Nik Gabrovsek, Patrick Gyasi, Gregor Steiner"
+date: "`r format(Sys.Date(), format = '%d.%m.%Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      #message = FALSE,
+                      fig.width = 5,
+                      fig.height = 3,
+                      fig.align = "center")
+```
+
+# VAR Coding Exercise
+
+
+
+
