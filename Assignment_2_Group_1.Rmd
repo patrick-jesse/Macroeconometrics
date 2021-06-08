@@ -40,10 +40,6 @@ get.package(c("tis", "MASS"))
 invis.Map <- function(f, ...) invisible(Map(f, ...)) 
 ```
 
-Noobtrack raus!
-
-
-
 
 
 
