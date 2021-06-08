@@ -39,3 +39,14 @@ get.package(c("tis", "MASS"))
 # since we will use Map() alot for plotting we will wrap it in invisible()
 invis.Map <- function(f, ...) invisible(Map(f, ...)) 
 ```
+
+Noobtrack raus!
+
+
+
+
+
+
+
+
+
