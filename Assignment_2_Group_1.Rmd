@@ -116,10 +116,6 @@ Xraw <- mlag(Yraw,plag)
 
 if(cons) Xraw <- cbind(Xraw, 1)
 
-# look at size of data
-dim(Y)
-dim(X)
-
 #first p rows are zero | conditioning on the first p observations
 Y <- Yraw[(plag+1):nrow(Yraw),]
 X <- Xraw[(plag+1):nrow(Xraw),]
@@ -143,36 +139,6 @@ S_OLS <- crossprod(E_OLS)/(bigT-K)
 
 # let's have a look at OLS estimates
 yfit <- X%*%A_OLS
-# amazing in-sample fit, but bad out-of-sample fit
-
-time <- as.yearqtr(time(usmacro))
-par(mfrow=c(3,1), mar=c(4,2,2,1))
-plot.ts(Y[,1], xlab="", ylab="", main="Inflation", xaxt="n", lwd=2, cex.main=1.5, cex.lab=2)
-lines(yfit[,1],col="red", lwd=2)
-axis(1, at=seq(1,195,by=20), labels=time[seq(1,195,by=20)], las=2)
-abline(v=seq(1,195,by=20), col="lightgrey", lty=3)
-plot.ts(Y[,2], xlab="", ylab="", main="Unemployment", xaxt="n", lwd=2, cex.main=1.5, cex.lab=2)
-lines(yfit[,2],col="red", lwd=2)
-axis(1, at=seq(1,195,by=20), labels=time[seq(1,195,by=20)], las=2)
-abline(v=seq(1,195,by=20), col="lightgrey", lty=3)
-plot.ts(Y[,3], xlab="", ylab="", main="T-bills", xaxt="n", lwd=2, cex.main=1.5, cex.lab=2)
-lines(yfit[,3],col="red", lwd=2)
-axis(1, at=seq(1,195,by=20), labels=time[seq(1,195,by=20)], las=2)
-abline(v=seq(1,195,by=20), col="lightgrey", lty=3)
-
-# look at errors
-plot.ts(E_OLS[,1], xlab="", ylab="", main="Error Inflation", xaxt="n", lwd=2, cex.main=1.5, cex.lab=2)
-axis(1, at=seq(1,195,by=20), labels=time[seq(1,195,by=20)], las=2)
-abline(v=seq(1,195,by=20), col="lightgrey", lty=3)
-plot.ts(E_OLS[,2], xlab="", ylab="", main="Error Unemployment", xaxt="n", lwd=2, cex.main=1.5, cex.lab=2)
-axis(1, at=seq(1,195,by=20), labels=time[seq(1,195,by=20)], las=2)
-abline(v=seq(1,195,by=20), col="lightgrey", lty=3)
-plot.ts(E_OLS[,3], xlab="", ylab="", main="Error T-bills", xaxt="n", lwd=2, cex.main=1.5, cex.lab=2)
-axis(1, at=seq(1,195,by=20), labels=time[seq(1,195,by=20)], las=2)
-abline(v=seq(1,195,by=20), col="lightgrey", lty=3)
-
-# explained variation
-diag(crossprod(yfit))/diag(crossprod(Y))
 
 # initialize draws with OLS estimators
 A_draw <- A_OLS
@@ -193,11 +159,21 @@ A_prior <- matrix(0,k,M)
 diag(A_prior) <- 1
 a_prior <- as.vector(A_prior)
 
+
+
+# hyperprior for lambdas: Gamma(alpha, beta)
+alpha.hyper <- 0.01
+beta.hyper <- 0.01
+
+# starting values for lambdas
+lambda1 <- 0.1; lambda2 <- 0.2; lambda3 <- 100
+lambda.draw <- c(lambda1, lambda2, lambda3)
+
 # Minnesota prior
 # own lags:       (lambda1/k)^2   # k == lag
 # cross lags:     (sig_i^2/sig_j^2)(lambda2/k)^2
 # deterministics: lambda3*sig_i^2
-lambda1 <- 0.1; lambda2 <- 0.2; lambda3 <- 100
+
 V_prior <- array(0,c(k,k,M))
 for(mm in 1:M){ # over all equations
   for(pp in 1:plag){ # over all lags
@@ -216,9 +192,14 @@ V_prior    <- lapply(seq(dim(V_prior)[3]), function(x) V_prior[,,x]) # array to 
 V_prior    <- Reduce(magic::adiag,V_prior)
 V_priorinv <- diag(1/diag(V_prior))
 
+
+
+
 # hyperparamter for inverse Wishart
 s0 <- M + 2
 S0 <- (s0 - M - 1)*diag(sigs)
+
+
 
 # outside loop calculations
 s_post    <- bigT + s0
@@ -238,6 +219,14 @@ S_store <- array(NA, c(nsave, M, M))
 eig_store <- numeric(length=nsave)
 cou_store <- numeric(length=nsave)
 
+
+# And storage for lambdas
+lambda.store <- matrix(NA, ncol = 3, nrow = nsave)
+
+# And parameters for the log-normal proposal
+kappa <- 1
+
+
 # Predictions -- dimensions: number of draws x number of variables x forecasting horizon
 yf_store <- array(NA, c(nsave,M,fhorz))
 
@@ -247,6 +236,20 @@ IRFsign_store <- array(NA,c(nsave,M,M,nhor))
 
 set.seed(1)
 for(irep in 1:ntot){
+  
+  # Step 0 : MH Step for lambdas
+  
+  # Draw proposal from log normal
+  lambda.prop <- exp(c(lambda1, lambda2, lambda3) + kappa * rnorm(3))
+  
+  # EValuate prior densities
+  prior.current <- dgamma(lambda.draw, alpha.hyper, beta.hyper)
+  prior.prop <- dgamma(lambda.prop, alpha.hyper, beta.hyper)
+  
+  # Evaluate Likelihoods
+  
+  
+  
   #-----------------------------------------------------------------------------
   # Step 1: Draw S_draw | Y, A_draw from IW
   # s_overbar = T + s_underbar (s0)
