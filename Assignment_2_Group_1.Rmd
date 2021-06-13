@@ -161,6 +161,22 @@ a_prior <- as.vector(A_prior)
 
 
 
+# hyperparamter for inverse Wishart
+s0 <- M + 2
+S0 <- (s0 - M - 1)*diag(sigs)
+
+
+```
+
+
+Before integrating it into the VAR code, let's first try to code up the MH-RW algorithm for the lambda priors.
+
+```{r}
+nsave <- 1000               # number of saved draws
+nburn <- 1000               # number of burned draws
+ntot  <- nsave + nburn      # number of total draws
+
+
 # hyperprior for lambdas: Gamma(alpha, beta)
 alpha.hyper <- 0.01
 beta.hyper <- 0.01
@@ -169,36 +185,73 @@ beta.hyper <- 0.01
 lambda1 <- 0.1; lambda2 <- 0.2; lambda3 <- 100
 lambda.draw <- c(lambda1, lambda2, lambda3)
 
-# Minnesota prior
-# own lags:       (lambda1/k)^2   # k == lag
-# cross lags:     (sig_i^2/sig_j^2)(lambda2/k)^2
-# deterministics: lambda3*sig_i^2
 
-V_prior <- array(0,c(k,k,M))
-for(mm in 1:M){ # over all equations
-  for(pp in 1:plag){ # over all lags
-    for(kk in 1:M){ # over all coefficients
-      # own lag
-      if(mm==kk){
-        V_prior[(pp-1)*M+kk,(pp-1)*M+kk,mm] <- (lambda1/pp)^2
-      }else{
-        V_prior[(pp-1)*M+kk,(pp-1)*M+kk,mm] <- (sigs[mm]/sigs[kk])*(lambda2/pp)^2
+# And storage for lambdas
+lambda.store <- matrix(NA, ncol = 3, nrow = nsave)
+
+# And parameters for the log-normal proposal
+kappa <- 1
+
+
+
+set.seed(1)
+for(irep in 1:ntot){
+  
+  # Step 0 : MH Step for lambdas
+  
+  # Draw proposal from log normal
+  lambda.prop <- exp(c(lambda1, lambda2, lambda3) + kappa * rnorm(3))
+  
+  # EValuate prior densities
+  p.c <- dgamma(lambda.draw, alpha.hyper, beta.hyper)
+  p.p <- dgamma(lambda.prop, alpha.hyper, beta.hyper)
+  
+    # Minnesota prior
+  # own lags:       (lambda1/k)^2   # k == lag
+  # cross lags:     (sig_i^2/sig_j^2)(lambda2/k)^2
+  # deterministics: lambda3*sig_i^2
+  
+  V_prior <- array(0,c(k,k,M))
+  V_prior.c <- array(0,c(k,k,M))
+  V_prior.p <- array(0,c(k,k,M))
+  
+  lapply(c(V_prior.c, V_prior.p), function(x){
+    V_prior <- x
+    for(mm in 1:M){ # over all equations
+      for(pp in 1:plag){ # over all lags
+        for(kk in 1:M){ # over all coefficients
+          # own lag
+          if(mm==kk){
+            V_prior[(pp-1)*M+kk,(pp-1)*M+kk,mm] <- (lambda1/pp)^2
+          }else{
+            V_prior[(pp-1)*M+kk,(pp-1)*M+kk,mm] <- (sigs[mm]/sigs[kk])*(lambda2/pp)^2
+          }
+        }
       }
+      V_prior[k,k,mm] <- lambda3*sigs[mm]
     }
-  }
-  V_prior[k,k,mm] <- lambda3*sigs[mm]
-}
-V_prior    <- lapply(seq(dim(V_prior)[3]), function(x) V_prior[,,x]) # array to list
-V_prior    <- Reduce(magic::adiag,V_prior)
-V_priorinv <- diag(1/diag(V_prior))
+    V_prior    <- lapply(seq(dim(V_prior)[3]), function(x) V_prior[,,x]) # array to list
+    V_prior    <- Reduce(magic::adiag,V_prior)
+    V_priorinv <- diag(1/diag(V_prior))
+    return(V_priorinv)
+  })
+  
+  # Evaluate Likelihoods
+  ll.c <- 
+  
 
 
 
 
-# hyperparamter for inverse Wishart
-s0 <- M + 2
-S0 <- (s0 - M - 1)*diag(sigs)
+```
 
+
+
+
+
+
+
+```{r}
 
 
 # outside loop calculations
@@ -243,10 +296,35 @@ for(irep in 1:ntot){
   lambda.prop <- exp(c(lambda1, lambda2, lambda3) + kappa * rnorm(3))
   
   # EValuate prior densities
-  prior.current <- dgamma(lambda.draw, alpha.hyper, beta.hyper)
-  prior.prop <- dgamma(lambda.prop, alpha.hyper, beta.hyper)
+  p.c <- dgamma(lambda.draw, alpha.hyper, beta.hyper)
+  p.p <- dgamma(lambda.prop, alpha.hyper, beta.hyper)
+  
+    # Minnesota prior
+  # own lags:       (lambda1/k)^2   # k == lag
+  # cross lags:     (sig_i^2/sig_j^2)(lambda2/k)^2
+  # deterministics: lambda3*sig_i^2
+  
+  
+  V_prior <- array(0,c(k,k,M))
+  for(mm in 1:M){ # over all equations
+    for(pp in 1:plag){ # over all lags
+      for(kk in 1:M){ # over all coefficients
+        # own lag
+        if(mm==kk){
+          V_prior[(pp-1)*M+kk,(pp-1)*M+kk,mm] <- (lambda1/pp)^2
+        }else{
+          V_prior[(pp-1)*M+kk,(pp-1)*M+kk,mm] <- (sigs[mm]/sigs[kk])*(lambda2/pp)^2
+        }
+      }
+    }
+    V_prior[k,k,mm] <- lambda3*sigs[mm]
+  }
+  V_prior    <- lapply(seq(dim(V_prior)[3]), function(x) V_prior[,,x]) # array to list
+  V_prior    <- Reduce(magic::adiag,V_prior)
+  V_priorinv <- diag(1/diag(V_prior))
   
   # Evaluate Likelihoods
+  ll.c <- 
   
   
   
@@ -452,19 +530,19 @@ yf_low    <- cbind(t(Yraw[(bigT-5):bigT,]),yf_low)
 yf_median <- cbind(t(Yraw[(bigT-5):bigT,]),yf_median)
 yf_high   <- cbind(t(Yraw[(bigT-5):bigT,]),yf_high)
 
-xax <- c(as.character(time[(bigT-5):bigT]),paste0("t+",seq(1,fhorz)))
-
-par(mfrow=c(3,1),mar=c(5,3,2,3))
-for(ii in 1:M){
-  min1 <- min(yf_low[ii,])
-  max1 <- max(yf_high[ii,])
-  plot.ts(yf_median[ii,], ylim=c(min1,max1), main=colnames(Y)[[ii]], ylab="", xlab="", xaxt="n",lwd=2)
-  lines(yf_low[ii,], lty=2,lwd=2)
-  lines(yf_high[ii,], lty=2,lwd=2)
-  lines(yf_median[ii,], lty=1,lwd=2)
-  axis(1, at=seq(1,14), labels=xax, las=2)
-  abline(v=seq(1,14), col="lightgrey", lty=2)
-}
+# xax <- c(as.character(time[(bigT-5):bigT]),paste0("t+",seq(1,fhorz)))
+# 
+# par(mfrow=c(3,1),mar=c(5,3,2,3))
+# for(ii in 1:M){
+#   min1 <- min(yf_low[ii,])
+#   max1 <- max(yf_high[ii,])
+#   plot.ts(yf_median[ii,], ylim=c(min1,max1), main=colnames(Y)[[ii]], ylab="", xlab="", xaxt="n",lwd=2)
+#   lines(yf_low[ii,], lty=2,lwd=2)
+#   lines(yf_high[ii,], lty=2,lwd=2)
+#   lines(yf_median[ii,], lty=1,lwd=2)
+#   axis(1, at=seq(1,14), labels=xax, las=2)
+#   abline(v=seq(1,14), col="lightgrey", lty=2)
+# }
 
 ```
 
