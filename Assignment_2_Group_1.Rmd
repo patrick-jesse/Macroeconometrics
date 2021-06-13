@@ -211,7 +211,7 @@ for(irep in 1:ntot){
   # cross lags:     (sig_i^2/sig_j^2)(lambda2/k)^2
   # deterministics: lambda3*sig_i^2
   
-  V_prior <- array(0,c(k,k,M))
+  # V_prior <- array(0,c(k,k,M))
   V_prior.c <- array(0,c(k,k,M))
   V_prior.p <- array(0,c(k,k,M))
   
