@@ -200,7 +200,7 @@ for(irep in 1:ntot){
   # Step 0 : MH Step for lambdas
   
   # Draw proposal from log normal
-  lambda.prop <- exp(c(lambda1, lambda2, lambda3) + kappa * rnorm(3))
+  lambda.prop <- exp(lambda.draw + kappa * rnorm(3))
   
   # EValuate prior densities
   p.c <- dgamma(lambda.draw, alpha.hyper, beta.hyper)
@@ -215,7 +215,7 @@ for(irep in 1:ntot){
   V_prior.c <- array(0,c(k,k,M))
   V_prior.p <- array(0,c(k,k,M))
   
-  lapply(c(V_prior.c, V_prior.p), function(x){
+  lapply(list(V_prior.c, V_prior.p), function(x){
     V_prior <- x
     for(mm in 1:M){ # over all equations
       for(pp in 1:plag){ # over all lags
