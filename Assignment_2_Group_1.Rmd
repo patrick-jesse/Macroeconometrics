@@ -172,17 +172,13 @@ S0 <- (s0 - M - 1)*diag(sigs)
 Before integrating it into the VAR code, let's first try to code up the MH-RW algorithm for the lambda priors.
 
 ```{r}
-nsave <- 1000               # number of saved draws
-nburn <- 1000               # number of burned draws
-ntot  <- nsave + nburn      # number of total draws
-
 
 # hyperprior for lambdas: Gamma(alpha, beta)
 alpha.hyper <- 0.01
 beta.hyper <- 0.01
 
 # starting values for lambdas
-lambda1 <- 0.1; lambda2 <- 0.2; lambda3 <- 100
+lambda1 <- 0.1; lambda2 <- 0.2; lambda3 <- 0.1
 lambda.draw <- c(lambda1, lambda2, lambda3)
 
 
@@ -190,7 +186,7 @@ lambda.draw <- c(lambda1, lambda2, lambda3)
 lambda.store <- matrix(NA, ncol = 3, nrow = nsave)
 
 # And parameters for the log-normal proposal
-kappa <- 1
+kappa <- 2
 
 
 
@@ -213,10 +209,12 @@ s_post    <- bigT + s0
 # MCMC setup
 #------------------------------------------------------------------------------------
 nsave <- 1000               # number of saved draws
-nburn <- 1000               # number of burned draws
+nburn <- 1000           # number of burned draws
 ntot  <- nsave + nburn      # number of total draws
 nhor  <- 13                 # horizon for IRFs
 fhorz <- 8                  # forecasting horizon
+accept <- 0
+
 
 # Container for MCMC draws
 A_store <- array(NA, c(nsave, k, M))
@@ -322,20 +320,30 @@ for(irep in 1:ntot){
   
   
   
-  # Aceept or reject
-  R.num <- prod(p.p) * ll.p *  dlnorm(t(lambda.prop) %*% lambda.draw, lambda.draw, kappa)
-  R.den <- prod(p.c) * ll.c *  dlnorm(t(lambda.prop) %*% lambda.draw, lambda.draw, kappa)
+  # Aceppt or reject
+  R.num <- prod(p.p) * ll.p *  prod(dlnorm(lambda.prop * lambda.draw, lambda.draw, kappa))
+  R.den <- prod(p.c) * ll.c *  prod(dlnorm(lambda.prop * lambda.draw, lambda.draw, kappa))
   
-  R <- R.num / R.den
+  R <- min(1, R.num / R.den)
   
+  if(R > runif(1)){
+    
+    # accept
+    lambda.draw <- lambda.prop
+    
+    # update counter
+    accept <- accept + 1
+    
+  }
   
   
   #-----------------------------------------------------------------------------
   # Step 3: Storage/Predictions/IRFs
   if(irep > nburn){
     # Step 3a: Save draws
-    A_store[irep-nburn,,] <- A_draw
+    A_store[irep-nburn,,] <- tmp.store[[1]][["A_draw"]]
     S_store[irep-nburn,,] <- S_draw
+    lambda.store[irep-nburn,] <- lambda.draw
 
     #---------------------------------------------------------------------------
     # Step 3b: Companion Matrix
@@ -527,6 +535,18 @@ yf_high   <- cbind(t(Yraw[(bigT-5):bigT,]),yf_high)
 
 ```
 
+Look at convergence of the lambdas:
+
+```{r}
+# Traceplots
+invisible(
+Map(\(x, y){
+  plot.ts(lambda.store[, x], ylab = y, col = 4, lwd = 2)
+  }, c(1:ncol(lambda.store)), c("Lambda_1", "Lambda_2", "Lambda_3"))
+)
+
+
+```
 
 
 
