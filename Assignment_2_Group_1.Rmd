@@ -194,53 +194,6 @@ kappa <- 1
 
 
 
-set.seed(1)
-for(irep in 1:ntot){
-  
-  # Step 0 : MH Step for lambdas
-  
-  # Draw proposal from log normal
-  lambda.prop <- exp(lambda.draw + kappa * rnorm(3))
-  
-  # EValuate prior densities
-  p.c <- dgamma(lambda.draw, alpha.hyper, beta.hyper)
-  p.p <- dgamma(lambda.prop, alpha.hyper, beta.hyper)
-  
-    # Minnesota prior
-  # own lags:       (lambda1/k)^2   # k == lag
-  # cross lags:     (sig_i^2/sig_j^2)(lambda2/k)^2
-  # deterministics: lambda3*sig_i^2
-  
-  # V_prior <- array(0,c(k,k,M))
-  V_prior.c <- array(0,c(k,k,M))
-  V_prior.p <- array(0,c(k,k,M))
-  
-  lapply(list(V_prior.c, V_prior.p), function(x){
-    V_prior <- x
-    for(mm in 1:M){ # over all equations
-      for(pp in 1:plag){ # over all lags
-        for(kk in 1:M){ # over all coefficients
-          # own lag
-          if(mm==kk){
-            V_prior[(pp-1)*M+kk,(pp-1)*M+kk,mm] <- (lambda1/pp)^2
-          }else{
-            V_prior[(pp-1)*M+kk,(pp-1)*M+kk,mm] <- (sigs[mm]/sigs[kk])*(lambda2/pp)^2
-          }
-        }
-      }
-      V_prior[k,k,mm] <- lambda3*sigs[mm]
-    }
-    V_prior    <- lapply(seq(dim(V_prior)[3]), function(x) V_prior[,,x]) # array to list
-    V_prior    <- Reduce(magic::adiag,V_prior)
-    V_priorinv <- diag(1/diag(V_prior))
-    return(V_priorinv)
-  })
-  
-  # Evaluate Likelihoods
-  ll.c <- 
-  
-
-
 
 
 ```
@@ -290,42 +243,6 @@ IRFsign_store <- array(NA,c(nsave,M,M,nhor))
 set.seed(1)
 for(irep in 1:ntot){
   
-  # Step 0 : MH Step for lambdas
-  
-  # Draw proposal from log normal
-  lambda.prop <- exp(c(lambda1, lambda2, lambda3) + kappa * rnorm(3))
-  
-  # EValuate prior densities
-  p.c <- dgamma(lambda.draw, alpha.hyper, beta.hyper)
-  p.p <- dgamma(lambda.prop, alpha.hyper, beta.hyper)
-  
-    # Minnesota prior
-  # own lags:       (lambda1/k)^2   # k == lag
-  # cross lags:     (sig_i^2/sig_j^2)(lambda2/k)^2
-  # deterministics: lambda3*sig_i^2
-  
-  
-  V_prior <- array(0,c(k,k,M))
-  for(mm in 1:M){ # over all equations
-    for(pp in 1:plag){ # over all lags
-      for(kk in 1:M){ # over all coefficients
-        # own lag
-        if(mm==kk){
-          V_prior[(pp-1)*M+kk,(pp-1)*M+kk,mm] <- (lambda1/pp)^2
-        }else{
-          V_prior[(pp-1)*M+kk,(pp-1)*M+kk,mm] <- (sigs[mm]/sigs[kk])*(lambda2/pp)^2
-        }
-      }
-    }
-    V_prior[k,k,mm] <- lambda3*sigs[mm]
-  }
-  V_prior    <- lapply(seq(dim(V_prior)[3]), function(x) V_prior[,,x]) # array to list
-  V_prior    <- Reduce(magic::adiag,V_prior)
-  V_priorinv <- diag(1/diag(V_prior))
-  
-  # Evaluate Likelihoods
-  ll.c <- 
-  
   
   
   #-----------------------------------------------------------------------------
@@ -340,15 +257,79 @@ for(irep in 1:ntot){
   # or using the MCMCpack
   S_draw    <- MCMCpack::riwish(s_post, S_post)
 
-  #-----------------------------------------------------------------------------
-  # Step 2: Draw A_draw | Y, S_draw from MVN
-  # V_overbar = (SIGMAinv otimes X'X + Vinv_underbar)^{-1}
-  # a_overbar = V_overbar (Vinv_underbar a_underbar + (SIGMAinv otimes X')y)
-  V_post    <- solve(kronecker(S_drawinv, XX) + V_priorinv)
-  A_post    <- V_post %*% (kronecker(S_drawinv, t(X))%*%y + V_priorinv%*%a_prior)
-
-  A_draw     <- matrix(A_post + t(chol(V_post))%*%rnorm(k*M),k,M)
-
+  
+  # Step 1.1 : MH Step for lambdas
+  
+  # Draw proposal from log normal
+  lambda.prop <- rlnorm(3, lambda.draw, kappa)
+  
+  # EValuate prior densities
+  p.c <- dgamma(lambda.draw, alpha.hyper, beta.hyper)
+  p.p <- dgamma(lambda.prop, alpha.hyper, beta.hyper)
+  
+    # Minnesota prior
+  # own lags:       (lambda1/k)^2   # k == lag
+  # cross lags:     (sig_i^2/sig_j^2)(lambda2/k)^2
+  # deterministics: lambda3*sig_i^2
+  
+  # V_prior <- array(0,c(k,k,M))
+  V_prior.c <- array(0,c(k,k,M))
+  V_prior.p <- array(0,c(k,k,M))
+  
+  Map(function(V_prior, lambda){
+    for(mm in 1:M){ # over all equations
+      for(pp in 1:plag){ # over all lags
+        for(kk in 1:M){ # over all coefficients
+          # own lag
+          if(mm==kk){
+            V_prior[(pp-1)*M+kk,(pp-1)*M+kk,mm] <- (lambda[1]/pp)^2
+          }else{
+            V_prior[(pp-1)*M+kk,(pp-1)*M+kk,mm] <- (sigs[mm]/sigs[kk])*(lambda[2]/pp)^2
+          }
+        }
+      }
+      V_prior[k,k,mm] <- lambda[3]*sigs[mm]
+    }
+    V_prior    <- lapply(seq(dim(V_prior)[3]), function(x) V_prior[,,x]) # array to list
+    V_prior    <- Reduce(magic::adiag,V_prior)
+    V_priorinv <- diag(1/diag(V_prior))
+      
+      #-----------------------------------------------------------------------------
+    # Step 2: Draw A_draw | Y, S_draw from MVN
+    # V_overbar = (SIGMAinv otimes X'X + Vinv_underbar)^{-1}
+    # a_overbar = V_overbar (Vinv_underbar a_underbar + (SIGMAinv otimes X')y)
+    V_post    <- solve(kronecker(S_drawinv, XX) + V_priorinv)
+    A_post    <- V_post %*% (kronecker(S_drawinv, t(X))%*%y + V_priorinv%*%a_prior)
+  
+    A_draw     <- matrix(A_post + t(chol(V_post))%*%rnorm(k*M), k, M)
+  
+    return(list("V_overbar" = V_post,
+                "a_overbar" = A_post,
+                "A_draw" = A_draw))
+    
+    
+  }, list(V_prior.c, V_prior.p), list(lambda.draw, lambda.prop)) -> tmp.store
+  
+  # Evaluate Likelihood
+  ll.c <- mvtnorm::dmvnorm(c(tmp.store[[1]][["A_draw"]]),
+                           tmp.store[[1]][["a_overbar"]],
+                           tmp.store[[1]][["V_overbar"]])
+  
+  ll.p <- mvtnorm::dmvnorm(c(tmp.store[[2]][["A_draw"]]),
+                           tmp.store[[2]][["a_overbar"]],
+                           tmp.store[[2]][["V_overbar"]])
+  
+  
+  
+  
+  # Aceept or reject
+  R.num <- prod(p.p) * ll.p *  dlnorm(t(lambda.prop) %*% lambda.draw, lambda.draw, kappa)
+  R.den <- prod(p.c) * ll.c *  dlnorm(t(lambda.prop) %*% lambda.draw, lambda.draw, kappa)
+  
+  R <- R.num / R.den
+  
+  
+  
   #-----------------------------------------------------------------------------
   # Step 3: Storage/Predictions/IRFs
   if(irep > nburn){
