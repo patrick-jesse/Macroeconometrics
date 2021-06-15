@@ -173,15 +173,6 @@ Before integrating it into the VAR code, let's first try to code up the MH-RW al
 
 ```{r}
 
-# hyperprior for lambdas: Gamma(alpha, beta)
-alpha.hyper <- 0.01
-beta.hyper <- 0.01
-
-# starting values for lambdas
-lambda1 <- 0.1; lambda2 <- 0.2; lambda3 <- 0.1
-lambda.draw <- c(lambda1, lambda2, lambda3)
-
-
 # And storage for lambdas
 lambda.store <- matrix(NA, ncol = 3, nrow = nsave)
 
@@ -224,11 +215,21 @@ eig_store <- numeric(length=nsave)
 cou_store <- numeric(length=nsave)
 
 
+
+# hyperprior for lambdas: Gamma(alpha, beta)
+alpha.hyper <- 0.01
+beta.hyper <- 0.01
+
+# starting values for lambdas
+lambda1 <- 0.1; lambda2 <- 0.2; lambda3 <- 0.1
+lambda.draw <- c(lambda1, lambda2, lambda3)
+
+
 # And storage for lambdas
 lambda.store <- matrix(NA, ncol = 3, nrow = nsave)
 
 # And parameters for the log-normal proposal
-kappa <- 1
+kappa <- 2
 
 
 # Predictions -- dimensions: number of draws x number of variables x forecasting horizon
@@ -549,6 +550,14 @@ Map(\(x, y){
 ```
 
 
+What does the prior density look like?
+
+```{r}
+# prior density
+x <- seq(0, 1, 0.01)
+plot(x, dgamma(x, alpha.hyper, beta.hyper), type = "l", lwd = 2, col = 4)
+
+```
 
 
 
