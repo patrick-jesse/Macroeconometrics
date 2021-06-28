@@ -180,7 +180,7 @@ s_post    <- bigT + s0
 # MCMC setup
 #------------------------------------------------------------------------------------
 nsave <- 1000               # number of saved draws
-nburn <- 1000           # number of burned draws
+nburn <- 1000        # number of burned draws
 ntot  <- nsave + nburn      # number of total draws
 nhor  <- 13                 # horizon for IRFs
 fhorz <- 8                  # forecasting horizon
@@ -209,7 +209,7 @@ lambda.draw <- c(lambda1, lambda2, lambda3)
 lambda.store <- matrix(NA, ncol = 3, nrow = nsave)
 
 # And parameters for the log-normal proposal
-kappa <- 2
+kappa <- 1
 
 
 # Predictions -- dimensions: number of draws x number of variables x forecasting horizon
@@ -316,6 +316,15 @@ for(irep in 1:ntot){
     accept <- accept + 1
     
   }
+  
+  
+  
+  # # Tune proposal variance during first 50% of burn-in
+  # if (irep < 0.5 * nburn) {
+  #   if(accept / irep > 0.3) kappa <- kappa * 1.01
+  #   if(accept / irep < 0.15) kappa <- kappa * 0.99
+  # }
+
   
   
   #-----------------------------------------------------------------------------
