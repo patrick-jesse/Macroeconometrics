@@ -169,26 +169,6 @@ S0 <- (s0 - M - 1)*diag(sigs)
 ```
 
 
-Before integrating it into the VAR code, let's first try to code up the MH-RW algorithm for the lambda priors.
-
-```{r}
-
-# And storage for lambdas
-lambda.store <- matrix(NA, ncol = 3, nrow = nsave)
-
-# And parameters for the log-normal proposal
-kappa <- 2
-
-
-
-
-
-```
-
-
-
-
-
 
 
 ```{r}
@@ -221,7 +201,7 @@ alpha.hyper <- 0.01
 beta.hyper <- 0.01
 
 # starting values for lambdas
-lambda1 <- 0.1; lambda2 <- 0.2; lambda3 <- 0.1
+lambda1 <- 1; lambda2 <- 1; lambda3 <- 1
 lambda.draw <- c(lambda1, lambda2, lambda3)
 
 
