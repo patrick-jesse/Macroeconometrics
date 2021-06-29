@@ -238,8 +238,8 @@ for(irep in 1:ntot){
   # Step 1.1 : MH Step for lambdas
   
   # Draw proposal from log normal
-  lambda.prop <- mapply(\(x, y) rnorm(1, x, y), lambda.draw, kappa)
-  
+  lambda.prop <- mapply(\(x, y) rlnorm(1, x, y), lambda.draw, kappa)
+
   # # # EValuate prior densities
   # p.c <- dgamma(lambda.draw, alpha.hyper, beta.hyper)
   # p.p <- dgamma(lambda.prop, alpha.hyper, beta.hyper)
