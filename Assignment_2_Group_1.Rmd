@@ -178,7 +178,7 @@ s_post    <- bigT + s0
 # MCMC setup
 #------------------------------------------------------------------------------------
 nsave <- 1000               # number of saved draws
-nburn <- 1000        # number of burned draws
+nburn <- 1000     # number of burned draws
 ntot  <- nsave + nburn      # number of total draws
 nhor  <- 13                 # horizon for IRFs
 fhorz <- 8                  # forecasting horizon
@@ -199,7 +199,7 @@ alpha.hyper <- 0.01
 beta.hyper <- 0.01
 
 # starting values for lambdas
-lambda1 <- 0.1; lambda2 <- 0.5; lambda3 <- 1
+lambda1 <- 0.1; lambda2 <- 0.2; lambda3 <- 10
 lambda.draw <- c(lambda1, lambda2, lambda3)
 
 
@@ -207,8 +207,7 @@ lambda.draw <- c(lambda1, lambda2, lambda3)
 lambda.store <- matrix(NA, ncol = 3, nrow = nsave)
 
 # And parameters for the log-normal proposal
-kappa <- c(0.7, 0.7, 0.7)
-
+kappa <- c(0.4, 0.4, 1.2)
 
 # Predictions -- dimensions: number of draws x number of variables x forecasting horizon
 yf_store <- array(NA, c(nsave,M,fhorz))
@@ -238,7 +237,7 @@ for(irep in 1:ntot){
   # Step 1.1 : MH Step for lambdas
   
   # Draw proposal from log normal
-  lambda.prop <- mapply(\(x, y) rlnorm(1, x, y), lambda.draw, kappa)
+  lambda.prop <- mapply(\(x, y) rlnorm(1, log(x), y), lambda.draw, kappa)
 
   # # # EValuate prior densities
   # p.c <- dgamma(lambda.draw, alpha.hyper, beta.hyper)
@@ -281,6 +280,7 @@ for(irep in 1:ntot){
     A_draw     <- matrix(A_post + t(chol(V_post))%*%rnorm(k*M), k, M)
   
     return(list("V_overbar" = V_post,
+                "V_underscore" = V_prior,
                 "a_overbar" = A_post,
                 "A_draw" = A_draw))
     
@@ -289,28 +289,31 @@ for(irep in 1:ntot){
   
   # Evaluate Likelihood
   ll.c <- mvtnorm::dmvnorm(c(tmp.store[[1]][["A_draw"]]),
-                           tmp.store[[1]][["a_overbar"]],
-                           tmp.store[[1]][["V_overbar"]])
+                           a_prior,
+                           tmp.store[[1]][["V_underscore"]])
   
   ll.p <- mvtnorm::dmvnorm(c(tmp.store[[2]][["A_draw"]]),
-                           tmp.store[[2]][["a_overbar"]],
-                           tmp.store[[2]][["V_overbar"]])
+                           a_prior,
+                           tmp.store[[2]][["V_underscore"]])
 
 
   # Aceppt or reject
-  mapply(\(x.c, x.p, i, kappa.int){
+  mapply(\(x.c, x.p, i){
     
     # EValuate prior densities
     p.c <- dgamma(x.c, alpha.hyper, beta.hyper)
     p.p <- dgamma(x.p, alpha.hyper, beta.hyper)
     
     # Accept Rule
-    R.num <- p.p * ll.p *  dlnorm(x.p * x.c, x.c, kappa.int)
-    R.den <- p.c * ll.c *  dlnorm(x.p * x.c, x.c, kappa.int)
-   
-    R <- min(1, R.num / R.den, na.rm = TRUE)
-  
-    if(R > runif(1)){
+    R.num <- p.p * ll.p *  dlnorm(x.p * x.c, log(x.c), kappa[i])
+    R.den <- p.c * ll.c *  dlnorm(x.p * x.c, log(x.c), kappa[i])
+    
+    R <- min(1, R.num / R.den)
+    
+    # Exclude NAs and NaNs
+    check <- !is.na(R) & !is.nan(R)
+    
+    if(check && R > runif(1)){
       
       # accept
       lambda.draw[i] <<- x.p
@@ -318,17 +321,21 @@ for(irep in 1:ntot){
       # update counter
       accept[i] <<- accept[i] + 1
     }
-    
-    # Tune proposal variance during first 50% of burn-in
-    # if (irep < 0.5 * nburn) {
-    #   if(accept[i] / irep > 0.3) kappa[i] <<- kappa.int * 1.01
-    #   if(accept[i] / irep < 0.15) kappa[i] <<- kappa.int * 0.99
-    # }
-    
-    
-  }, lambda.draw, lambda.prop, 1:3, kappa)
-  
 
+    
+  }, lambda.draw, lambda.prop, 1:3)
+  
+  # 
+  # for (i in 1:length(kappa)) {
+  #   # Tune proposal variance during first 50% of burn-in
+  #   if (irep < 0.5 * ntot) {
+  #     if(all(kappa > 0.05)) { # if kappa gets too small the proposal density is zero
+  #       if(accept[i] / irep > 0.3) kappa[i] <- kappa[i] * 1.01
+  #       if(accept[i] / irep < 0.15) kappa[i] <- kappa[i] * 0.99
+  #     }
+  #   }
+  # }
+  # 
 
 
   
