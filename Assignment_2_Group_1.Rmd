@@ -199,7 +199,7 @@ alpha.hyper <- 0.01
 beta.hyper <- 0.01
 
 # starting values for lambdas
-lambda1 <- 0.1; lambda2 <- 0.2; lambda3 <- 1
+lambda1 <- 0.1; lambda2 <- 0.2; lambda3 <- 10
 lambda.draw <- c(lambda1, lambda2, lambda3)
 
 
@@ -207,8 +207,8 @@ lambda.draw <- c(lambda1, lambda2, lambda3)
 lambda.store <- matrix(NA, ncol = 3, nrow = nsave)
 
 # And parameters for the log-normal proposal
-kappa <- c(0.37, 0.20, 0.7112) # no log
-
+# kappa <- c(0.37, 0.20, 0.7112) # no log
+kappa <- c(0.01, 0.05, 0.5)
 
 # Predictions -- dimensions: number of draws x number of variables x forecasting horizon
 yf_store <- array(NA, c(nsave,M,fhorz))
@@ -238,7 +238,7 @@ for(irep in 1:ntot){
   # Step 1.1 : MH Step for lambdas
   
   # Draw proposal from log normal
-  lambda.prop <- mapply(\(x, y) rlnorm(1, log(x), y), lambda.draw, kappa)
+  lambda.prop <- mapply(\(x, y) rlnorm(1, x, y), lambda.draw, kappa)
 
   # # # EValuate prior densities
   # p.c <- dgamma(lambda.draw, alpha.hyper, beta.hyper)
@@ -306,8 +306,8 @@ for(irep in 1:ntot){
     p.p <- dgamma(x.p, alpha.hyper, beta.hyper)
     
     # Accept Rule
-    R.num <- p.p * ll.p *  dlnorm(x.p * x.c, x.c, kappa[i])
-    R.den <- p.c * ll.c *  dlnorm(x.p * x.c, x.c, kappa[i])
+    R.num <- p.p * ll.p *  dlnorm(x.c, x.p, kappa[i])
+    R.den <- p.c * ll.c *  dlnorm(x.p, x.c, kappa[i])
     
     R <- min(1, R.num / R.den)
     
