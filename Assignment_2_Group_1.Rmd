@@ -116,10 +116,6 @@ Xraw <- mlag(Yraw,plag)
 
 if(cons) Xraw <- cbind(Xraw, 1)
 
-# look at size of data
-dim(Y)
-dim(X)
-
 #first p rows are zero | conditioning on the first p observations
 Y <- Yraw[(plag+1):nrow(Yraw),]
 X <- Xraw[(plag+1):nrow(Xraw),]
@@ -143,36 +139,6 @@ S_OLS <- crossprod(E_OLS)/(bigT-K)
 
 # let's have a look at OLS estimates
 yfit <- X%*%A_OLS
-# amazing in-sample fit, but bad out-of-sample fit
-
-time <- as.yearqtr(time(usmacro))
-par(mfrow=c(3,1), mar=c(4,2,2,1))
-plot.ts(Y[,1], xlab="", ylab="", main="Inflation", xaxt="n", lwd=2, cex.main=1.5, cex.lab=2)
-lines(yfit[,1],col="red", lwd=2)
-axis(1, at=seq(1,195,by=20), labels=time[seq(1,195,by=20)], las=2)
-abline(v=seq(1,195,by=20), col="lightgrey", lty=3)
-plot.ts(Y[,2], xlab="", ylab="", main="Unemployment", xaxt="n", lwd=2, cex.main=1.5, cex.lab=2)
-lines(yfit[,2],col="red", lwd=2)
-axis(1, at=seq(1,195,by=20), labels=time[seq(1,195,by=20)], las=2)
-abline(v=seq(1,195,by=20), col="lightgrey", lty=3)
-plot.ts(Y[,3], xlab="", ylab="", main="T-bills", xaxt="n", lwd=2, cex.main=1.5, cex.lab=2)
-lines(yfit[,3],col="red", lwd=2)
-axis(1, at=seq(1,195,by=20), labels=time[seq(1,195,by=20)], las=2)
-abline(v=seq(1,195,by=20), col="lightgrey", lty=3)
-
-# look at errors
-plot.ts(E_OLS[,1], xlab="", ylab="", main="Error Inflation", xaxt="n", lwd=2, cex.main=1.5, cex.lab=2)
-axis(1, at=seq(1,195,by=20), labels=time[seq(1,195,by=20)], las=2)
-abline(v=seq(1,195,by=20), col="lightgrey", lty=3)
-plot.ts(E_OLS[,2], xlab="", ylab="", main="Error Unemployment", xaxt="n", lwd=2, cex.main=1.5, cex.lab=2)
-axis(1, at=seq(1,195,by=20), labels=time[seq(1,195,by=20)], las=2)
-abline(v=seq(1,195,by=20), col="lightgrey", lty=3)
-plot.ts(E_OLS[,3], xlab="", ylab="", main="Error T-bills", xaxt="n", lwd=2, cex.main=1.5, cex.lab=2)
-axis(1, at=seq(1,195,by=20), labels=time[seq(1,195,by=20)], las=2)
-abline(v=seq(1,195,by=20), col="lightgrey", lty=3)
-
-# explained variation
-diag(crossprod(yfit))/diag(crossprod(Y))
 
 # initialize draws with OLS estimators
 A_draw <- A_OLS
@@ -193,43 +159,31 @@ A_prior <- matrix(0,k,M)
 diag(A_prior) <- 1
 a_prior <- as.vector(A_prior)
 
-# Minnesota prior
-# own lags:       (lambda1/k)^2   # k == lag
-# cross lags:     (sig_i^2/sig_j^2)(lambda2/k)^2
-# deterministics: lambda3*sig_i^2
-lambda1 <- 0.1; lambda2 <- 0.2; lambda3 <- 100
-V_prior <- array(0,c(k,k,M))
-for(mm in 1:M){ # over all equations
-  for(pp in 1:plag){ # over all lags
-    for(kk in 1:M){ # over all coefficients
-      # own lag
-      if(mm==kk){
-        V_prior[(pp-1)*M+kk,(pp-1)*M+kk,mm] <- (lambda1/pp)^2
-      }else{
-        V_prior[(pp-1)*M+kk,(pp-1)*M+kk,mm] <- (sigs[mm]/sigs[kk])*(lambda2/pp)^2
-      }
-    }
-  }
-  V_prior[k,k,mm] <- lambda3*sigs[mm]
-}
-V_prior    <- lapply(seq(dim(V_prior)[3]), function(x) V_prior[,,x]) # array to list
-V_prior    <- Reduce(magic::adiag,V_prior)
-V_priorinv <- diag(1/diag(V_prior))
+
 
 # hyperparamter for inverse Wishart
 s0 <- M + 2
 S0 <- (s0 - M - 1)*diag(sigs)
 
+
+```
+
+
+
+
+```{r}
 # outside loop calculations
 s_post    <- bigT + s0
 #------------------------------------------------------------------------------------
 # MCMC setup
 #------------------------------------------------------------------------------------
 nsave <- 1000               # number of saved draws
-nburn <- 1000               # number of burned draws
+nburn <- 1000        # number of burned draws
 ntot  <- nsave + nburn      # number of total draws
 nhor  <- 13                 # horizon for IRFs
 fhorz <- 8                  # forecasting horizon
+accept <- c(0, 0, 0)
+
 
 # Container for MCMC draws
 A_store <- array(NA, c(nsave, k, M))
@@ -237,6 +191,24 @@ S_store <- array(NA, c(nsave, M, M))
 
 eig_store <- numeric(length=nsave)
 cou_store <- numeric(length=nsave)
+
+
+
+# hyperprior for lambdas: Gamma(alpha, beta)
+alpha.hyper <- 0.01
+beta.hyper <- 0.01
+
+# starting values for lambdas
+lambda1 <- 0.1; lambda2 <- 0.5; lambda3 <- 1
+lambda.draw <- c(lambda1, lambda2, lambda3)
+
+
+# And storage for lambdas
+lambda.store <- matrix(NA, ncol = 3, nrow = nsave)
+
+# And parameters for the log-normal proposal
+kappa <- c(0.7, 0.7, 0.7)
+
 
 # Predictions -- dimensions: number of draws x number of variables x forecasting horizon
 yf_store <- array(NA, c(nsave,M,fhorz))
@@ -247,6 +219,9 @@ IRFsign_store <- array(NA,c(nsave,M,M,nhor))
 
 set.seed(1)
 for(irep in 1:ntot){
+  
+  
+  
   #-----------------------------------------------------------------------------
   # Step 1: Draw S_draw | Y, A_draw from IW
   # s_overbar = T + s_underbar (s0)
@@ -259,21 +234,112 @@ for(irep in 1:ntot){
   # or using the MCMCpack
   S_draw    <- MCMCpack::riwish(s_post, S_post)
 
-  #-----------------------------------------------------------------------------
-  # Step 2: Draw A_draw | Y, S_draw from MVN
-  # V_overbar = (SIGMAinv otimes X'X + Vinv_underbar)^{-1}
-  # a_overbar = V_overbar (Vinv_underbar a_underbar + (SIGMAinv otimes X')y)
-  V_post    <- solve(kronecker(S_drawinv, XX) + V_priorinv)
-  A_post    <- V_post %*% (kronecker(S_drawinv, t(X))%*%y + V_priorinv%*%a_prior)
+  
+  # Step 1.1 : MH Step for lambdas
+  
+  # Draw proposal from log normal
+  lambda.prop <- mapply(\(x, y) rlnorm(1, x, y), lambda.draw, kappa)
 
-  A_draw     <- matrix(A_post + t(chol(V_post))%*%rnorm(k*M),k,M)
+  # # # EValuate prior densities
+  # p.c <- dgamma(lambda.draw, alpha.hyper, beta.hyper)
+  # p.p <- dgamma(lambda.prop, alpha.hyper, beta.hyper)
+  
+    # Minnesota prior
+  # own lags:       (lambda1/k)^2   # k == lag
+  # cross lags:     (sig_i^2/sig_j^2)(lambda2/k)^2
+  # deterministics: lambda3*sig_i^2
+  
+  # V_prior <- array(0,c(k,k,M))
+  V_prior.c <- array(0,c(k,k,M))
+  V_prior.p <- array(0,c(k,k,M))
+  
+  Map(function(V_prior, lambda){
+    for(mm in 1:M){ # over all equations
+      for(pp in 1:plag){ # over all lags
+        for(kk in 1:M){ # over all coefficients
+          # own lag
+          if(mm == kk){
+            V_prior[(pp-1)*M+kk,(pp-1)*M+kk,mm] <- (lambda[1]/pp)^2
+          }else{
+            V_prior[(pp-1)*M+kk,(pp-1)*M+kk,mm] <- (sigs[mm]/sigs[kk])*(lambda[2]/pp)^2
+          }
+        }
+      }
+      V_prior[k,k,mm] <- lambda[3]*sigs[mm]
+    }
+    V_prior    <- lapply(seq(dim(V_prior)[3]), function(x) V_prior[,,x]) # array to list
+    V_prior    <- Reduce(magic::adiag,V_prior)
+    V_priorinv <- diag(1/diag(V_prior))
+      
+      #-----------------------------------------------------------------------------
+    # Step 2: Draw A_draw | Y, S_draw from MVN
+    # V_overbar = (SIGMAinv otimes X'X + Vinv_underbar)^{-1}
+    # a_overbar = V_overbar (Vinv_underbar a_underbar + (SIGMAinv otimes X')y)
+    V_post    <- solve(kronecker(S_drawinv, XX) + V_priorinv)
+    A_post    <- V_post %*% (kronecker(S_drawinv, t(X))%*%y + V_priorinv%*%a_prior)
+  
+    A_draw     <- matrix(A_post + t(chol(V_post))%*%rnorm(k*M), k, M)
+  
+    return(list("V_overbar" = V_post,
+                "a_overbar" = A_post,
+                "A_draw" = A_draw))
+    
+    
+  }, list(V_prior.c, V_prior.p), list(lambda.draw, lambda.prop)) -> tmp.store
+  
+  # Evaluate Likelihood
+  ll.c <- mvtnorm::dmvnorm(c(tmp.store[[1]][["A_draw"]]),
+                           tmp.store[[1]][["a_overbar"]],
+                           tmp.store[[1]][["V_overbar"]])
+  
+  ll.p <- mvtnorm::dmvnorm(c(tmp.store[[2]][["A_draw"]]),
+                           tmp.store[[2]][["a_overbar"]],
+                           tmp.store[[2]][["V_overbar"]])
 
+
+  # Aceppt or reject
+  mapply(\(x.c, x.p, i, kappa.int){
+    
+    # EValuate prior densities
+    p.c <- dgamma(x.c, alpha.hyper, beta.hyper)
+    p.p <- dgamma(x.p, alpha.hyper, beta.hyper)
+    
+    # Accept Rule
+    R.num <- p.p * ll.p *  dlnorm(x.p * x.c, x.c, kappa.int)
+    R.den <- p.c * ll.c *  dlnorm(x.p * x.c, x.c, kappa.int)
+   
+    R <- min(1, R.num / R.den, na.rm = TRUE)
+  
+    if(R > runif(1)){
+      
+      # accept
+      lambda.draw[i] <<- x.p
+      
+      # update counter
+      accept[i] <<- accept[i] + 1
+    }
+    
+    # Tune proposal variance during first 50% of burn-in
+    # if (irep < 0.5 * nburn) {
+    #   if(accept[i] / irep > 0.3) kappa[i] <<- kappa.int * 1.01
+    #   if(accept[i] / irep < 0.15) kappa[i] <<- kappa.int * 0.99
+    # }
+    
+    
+  }, lambda.draw, lambda.prop, 1:3, kappa)
+  
+
+
+
+  
+  
   #-----------------------------------------------------------------------------
   # Step 3: Storage/Predictions/IRFs
   if(irep > nburn){
     # Step 3a: Save draws
-    A_store[irep-nburn,,] <- A_draw
+    A_store[irep-nburn,,] <- tmp.store[[1]][["A_draw"]]
     S_store[irep-nburn,,] <- S_draw
+    lambda.store[irep-nburn,] <- lambda.draw
 
     #---------------------------------------------------------------------------
     # Step 3b: Companion Matrix
@@ -449,21 +515,50 @@ yf_low    <- cbind(t(Yraw[(bigT-5):bigT,]),yf_low)
 yf_median <- cbind(t(Yraw[(bigT-5):bigT,]),yf_median)
 yf_high   <- cbind(t(Yraw[(bigT-5):bigT,]),yf_high)
 
-xax <- c(as.character(time[(bigT-5):bigT]),paste0("t+",seq(1,fhorz)))
-
-par(mfrow=c(3,1),mar=c(5,3,2,3))
-for(ii in 1:M){
-  min1 <- min(yf_low[ii,])
-  max1 <- max(yf_high[ii,])
-  plot.ts(yf_median[ii,], ylim=c(min1,max1), main=colnames(Y)[[ii]], ylab="", xlab="", xaxt="n",lwd=2)
-  lines(yf_low[ii,], lty=2,lwd=2)
-  lines(yf_high[ii,], lty=2,lwd=2)
-  lines(yf_median[ii,], lty=1,lwd=2)
-  axis(1, at=seq(1,14), labels=xax, las=2)
-  abline(v=seq(1,14), col="lightgrey", lty=2)
-}
+# xax <- c(as.character(time[(bigT-5):bigT]),paste0("t+",seq(1,fhorz)))
+# 
+# par(mfrow=c(3,1),mar=c(5,3,2,3))
+# for(ii in 1:M){
+#   min1 <- min(yf_low[ii,])
+#   max1 <- max(yf_high[ii,])
+#   plot.ts(yf_median[ii,], ylim=c(min1,max1), main=colnames(Y)[[ii]], ylab="", xlab="", xaxt="n",lwd=2)
+#   lines(yf_low[ii,], lty=2,lwd=2)
+#   lines(yf_high[ii,], lty=2,lwd=2)
+#   lines(yf_median[ii,], lty=1,lwd=2)
+#   axis(1, at=seq(1,14), labels=xax, las=2)
+#   abline(v=seq(1,14), col="lightgrey", lty=2)
+# }
 
 ```
+
+Look at convergence of the lambdas:
+
+```{r}
+# Traceplots
+invisible(
+Map(\(x, y){
+  plot.ts(lambda.store[, x], ylab = y, col = 4, lwd = 2)
+  }, c(1:ncol(lambda.store)), c("Lambda_1", "Lambda_2", "Lambda_3"))
+)
+
+
+```
+
+
+What does the prior density look like?
+
+```{r}
+# prior density
+x <- seq(0, 1, 0.01)
+plot(x, dgamma(x, alpha.hyper, beta.hyper), type = "l", lwd = 2, col = 4)
+
+```
+
+
+
+
+
+
 
 
 
