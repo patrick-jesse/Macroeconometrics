@@ -549,7 +549,7 @@ What does the prior density look like?
 
 ```{r}
 # prior density
-x <- seq(0, 1, 0.01)
+x <- seq(0, 10, 0.01)
 plot(x, dgamma(x, alpha.hyper, beta.hyper), type = "l", lwd = 2, col = 4)
 
 ```
