@@ -207,7 +207,7 @@ lambda.draw <- c(lambda1, lambda2, lambda3)
 lambda.store <- matrix(NA, ncol = 3, nrow = nsave)
 
 # And parameters for the log-normal proposal
-kappa <- c(0.35, 0.29, 0.67) # no log
+kappa <- c(0.37, 0.20, 0.7112) # no log
 
 
 # Predictions -- dimensions: number of draws x number of variables x forecasting horizon
@@ -291,11 +291,11 @@ for(irep in 1:ntot){
   # Evaluate Likelihood
   ll.c <- mvtnorm::dmvnorm(c(tmp.store[[1]][["A_draw"]]),
                            a_prior,
-                           tmp.store[[1]][["V_overbar"]])
+                           tmp.store[[1]][["V_underscore"]])
   
   ll.p <- mvtnorm::dmvnorm(c(tmp.store[[2]][["A_draw"]]),
                            a_prior,
-                           tmp.store[[2]][["V_overbar"]])
+                           tmp.store[[2]][["V_underscore"]])
 
 
   # Aceppt or reject
@@ -546,6 +546,13 @@ Look at convergence of the lambdas:
 invisible(
 Map(\(x, y){
   plot.ts(lambda.store[, x], ylab = y, col = 4, lwd = 2)
+  }, c(1:ncol(lambda.store)), c("Lambda_1", "Lambda_2", "Lambda_3"))
+)
+
+# Density
+invisible(
+Map(\(x, y){
+  plot(density(lambda.store[, x]), ylab = y, col = 4, lwd = 2)
   }, c(1:ncol(lambda.store)), c("Lambda_1", "Lambda_2", "Lambda_3"))
 )
 
