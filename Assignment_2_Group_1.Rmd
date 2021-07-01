@@ -177,8 +177,8 @@ s_post    <- bigT + s0
 #------------------------------------------------------------------------------------
 # MCMC setup
 #------------------------------------------------------------------------------------
-nsave <- 1000               # number of saved draws
-nburn <- 1000     # number of burned draws
+nsave <- 2000               # number of saved draws
+nburn <- 0               # number of burned draws
 ntot  <- nsave + nburn      # number of total draws
 nhor  <- 13                 # horizon for IRFs
 fhorz <- 8                  # forecasting horizon
@@ -208,7 +208,7 @@ lambda.store <- matrix(NA, ncol = 3, nrow = nsave)
 
 # And parameters for the log-normal proposal
 # kappa <- c(0.37, 0.20, 0.7112) # no log
-kappa <- c(0.01, 0.05, 0.5)
+kappa <- c(0.3, 0.3, 0.3)
 
 # Predictions -- dimensions: number of draws x number of variables x forecasting horizon
 yf_store <- array(NA, c(nsave,M,fhorz))
@@ -238,8 +238,8 @@ for(irep in 1:ntot){
   # Step 1.1 : MH Step for lambdas
   
   # Draw proposal from log normal
-  lambda.prop <- mapply(\(x, y) rlnorm(1, x, y), lambda.draw, kappa)
-
+  lambda.prop <- rlnorm(3, log(lambda.draw), kappa)
+  
   # # # EValuate prior densities
   # p.c <- dgamma(lambda.draw, alpha.hyper, beta.hyper)
   # p.p <- dgamma(lambda.prop, alpha.hyper, beta.hyper)
@@ -270,7 +270,6 @@ for(irep in 1:ntot){
     V_prior    <- lapply(seq(dim(V_prior)[3]), function(x) V_prior[,,x]) # array to list
     V_prior    <- Reduce(magic::adiag,V_prior)
     V_priorinv <- diag(1/diag(V_prior))
-      
       #-----------------------------------------------------------------------------
     # Step 2: Draw A_draw | Y, S_draw from MVN
     # V_overbar = (SIGMAinv otimes X'X + Vinv_underbar)^{-1}
@@ -291,30 +290,30 @@ for(irep in 1:ntot){
   # Evaluate Likelihood
   ll.c <- mvtnorm::dmvnorm(c(tmp.store[[1]][["A_draw"]]),
                            a_prior,
-                           tmp.store[[1]][["V_underscore"]])
+                           tmp.store[[1]][["V_underscore"]], log = T)
   
   ll.p <- mvtnorm::dmvnorm(c(tmp.store[[2]][["A_draw"]]),
                            a_prior,
-                           tmp.store[[2]][["V_underscore"]])
+                           tmp.store[[2]][["V_underscore"]], log = T)
 
 
   # Aceppt or reject
   mapply(\(x.c, x.p, i){
     
     # EValuate prior densities
-    p.c <- dgamma(x.c, alpha.hyper, beta.hyper)
-    p.p <- dgamma(x.p, alpha.hyper, beta.hyper)
+    p.c <- dgamma(x.c, alpha.hyper, beta.hyper, log = T)
+    p.p <- dgamma(x.p, alpha.hyper, beta.hyper, log = T)
     
     # Accept Rule
-    R.num <- p.p * ll.p *  dlnorm(x.c, x.p, kappa[i])
-    R.den <- p.c * ll.c *  dlnorm(x.p, x.c, kappa[i])
+    R.num <- p.p + ll.p + dlnorm(x.c, log(x.p), kappa[i], log = T)
+    R.den <- p.c + ll.c + dlnorm(x.p, log(x.c), kappa[i], log = T)
     
-    R <- min(1, R.num / R.den)
-    
+    R <- min(0, R.num - R.den)
+   
     # Exclude NAs and NaNs
-    check <- !is.na(R) & !is.nan(R)
+    #check <- !is.na(R) & !is.nan(R)
     
-    if(check && R > runif(1)){
+    if(R > log(runif(1))){
       
       # accept
       lambda.draw[i] <<- x.p
@@ -326,7 +325,7 @@ for(irep in 1:ntot){
     
   }, lambda.draw, lambda.prop, 1:3)
   
-  # 
+
   # for (i in 1:length(kappa)) {
   #   # Tune proposal variance during first 50% of burn-in
   #   if (irep < 0.5 * ntot) {
@@ -336,7 +335,7 @@ for(irep in 1:ntot){
   #     }
   #   }
   # }
-  # 
+
 
 
   
