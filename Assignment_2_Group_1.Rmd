@@ -208,7 +208,7 @@ lambda.store <- matrix(NA, ncol = 3, nrow = nsave)
 
 # And parameters for the log-normal proposal
 # kappa <- c(0.37, 0.20, 0.7112) # no log
-kappa <- c(0.3, 0.3, 0.3)
+kappa <- c(0.5, 0.5, 0.5)
 
 # Predictions -- dimensions: number of draws x number of variables x forecasting horizon
 yf_store <- array(NA, c(nsave,M,fhorz))
@@ -238,7 +238,7 @@ for(irep in 1:ntot){
   # Step 1.1 : MH Step for lambdas
   
   # Draw proposal from log normal
-  lambda.prop <- rlnorm(3, log(lambda.draw), kappa)
+  lambda.prop <- mapply(\(x, y) exp(rnorm(1, log(x), y)), lambda.draw, kappa)
   
   # # # EValuate prior densities
   # p.c <- dgamma(lambda.draw, alpha.hyper, beta.hyper)
@@ -468,7 +468,7 @@ for(jj in 1:M){
   }
 }
 
-idx<-which(abs(Z_scores)>crit_val)
+idx <- which(abs(Z_scores)>crit_val)
 paste(length(idx), " out of ",k+M^2, " variables' z-values exceed the 1.96 threshold", " (", round(length(idx)/(k+M^2)*100,2),"%)",sep="")
 
 #Quantiles over the first dimension (number of saved draws)
@@ -554,8 +554,6 @@ Map(\(x, y){
   plot(density(lambda.store[, x]), ylab = y, col = 4, lwd = 2)
   }, c(1:ncol(lambda.store)), c("Lambda_1", "Lambda_2", "Lambda_3"))
 )
-
-
 ```
 
 
